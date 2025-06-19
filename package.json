@@ -1,0 +1,40 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@arco-design/web-vue": "^2.57.0",
+    "@pinia/nuxt": "^0.11.1",
+    "@tiptap/core": "^2.14.0",
+    "@tiptap/extension-collaboration": "^2.14.0",
+    "@tiptap/extension-collaboration-cursor": "^2.14.0",
+    "@tiptap/starter-kit": "^2.14.0",
+    "@tiptap/vue-3": "^2.14.0",
+    "@vueuse/nuxt": "^13.3.0",
+    "dayjs": "^1.11.13",
+    "nuxt": "^3.17.5",
+    "pinia": "^3.0.3",
+    "uuid": "^11.1.0",
+    "vue": "^3.5.16",
+    "vue-router": "^4.5.1",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.27"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "^2.5.0",
+    "@nuxt/eslint": "^1.4.1",
+    "@nuxt/icon": "^1.13.0",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.8.3",
+    "vue-tsc": "^2.2.10",
+    "ws": "^8.18.2"
+  }
+}
