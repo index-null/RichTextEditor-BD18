@@ -20,8 +20,8 @@
         <!-- 左侧目录树 -->
         <div class="sidebar">
           <ACard title="文档目录" :bordered="false">
-            <ATree 
-              :data="documentTree" 
+            <ATree
+              :data="documentTree"
               :default-expand-all="true"
               @select="handleTreeSelect"
             >
@@ -42,8 +42,8 @@
           <div class="recent-section">
             <h3>最近访问</h3>
             <div class="document-grid">
-              <ACard 
-                v-for="doc in recentDocuments" 
+              <ACard
+                v-for="doc in recentDocuments"
                 :key="doc.id"
                 class="document-card"
                 hoverable
@@ -63,8 +63,8 @@
           <!-- 我的文档 -->
           <div class="documents-section">
             <h3>我的文档</h3>
-            <ATable 
-              :data="myDocuments" 
+            <ATable
+              :data="myDocuments"
               :columns="documentColumns"
               :pagination="false"
             >
@@ -75,8 +75,15 @@
                 </div>
               </template>
               <template #actions="{ record }">
-                <AButton size="mini" @click="renameDocument(record)">重命名</AButton>
-                <AButton size="mini" status="danger" @click="deleteDocument(record.id)">删除</AButton>
+                <AButton size="mini" @click="renameDocument(record)"
+                  >重命名</AButton
+                >
+                <AButton
+                  size="mini"
+                  status="danger"
+                  @click="deleteDocument(record.id)"
+                  >删除</AButton
+                >
               </template>
             </ATable>
           </div>
@@ -87,113 +94,114 @@
 </template>
 
 <script setup lang="ts">
-import { IconPlus, IconFolder, IconFile } from '@arco-design/web-vue/es/icon'
-
 // 页面标题
 useHead({
-  title: '首页 - 协同文档编辑器'
-})
+  title: "首页 - 协同文档编辑器",
+});
 
 // 模拟数据
 const documentTree = ref([
   {
-    key: '1',
-    title: '工作文档',
-    type: 'folder',
+    key: "1",
+    title: "工作文档",
+    type: "folder",
     children: [
-      { key: '1-1', title: '项目计划.md', type: 'document' },
-      { key: '1-2', title: '需求文档.md', type: 'document' }
-    ]
+      { key: "1-1", title: "项目计划.md", type: "document" },
+      { key: "1-2", title: "需求文档.md", type: "document" },
+    ],
   },
   {
-    key: '2', 
-    title: '个人笔记',
-    type: 'folder',
-    children: [
-      { key: '2-1', title: '学习笔记.md', type: 'document' }
-    ]
-  }
-])
+    key: "2",
+    title: "个人笔记",
+    type: "folder",
+    children: [{ key: "2-1", title: "学习笔记.md", type: "document" }],
+  },
+]);
 
 const recentDocuments = ref([
   {
-    id: '1',
-    title: '项目技术方案',
-    updatedAt: new Date('2024-01-15'),
-    author: '张三'
+    id: "1",
+    title: "项目技术方案",
+    updatedAt: new Date("2024-01-15"),
+    author: "张三",
   },
   {
-    id: '2', 
-    title: '产品需求文档',
-    updatedAt: new Date('2024-01-14'),
-    author: '李四'
-  }
-])
+    id: "2",
+    title: "产品需求文档",
+    updatedAt: new Date("2024-01-14"),
+    author: "李四",
+  },
+]);
 
 const myDocuments = ref([
   {
-    id: '1',
-    title: '项目技术方案',
-    updatedAt: new Date('2024-01-15'),
-    author: '张三',
-    size: '2.3KB'
+    id: "1",
+    title: "项目技术方案",
+    updatedAt: new Date("2024-01-15"),
+    author: "张三",
+    size: "2.3KB",
   },
   {
-    id: '2',
-    title: '产品需求文档', 
-    updatedAt: new Date('2024-01-14'),
-    author: '李四',
-    size: '1.8KB'
-  }
-])
+    id: "2",
+    title: "产品需求文档",
+    updatedAt: new Date("2024-01-14"),
+    author: "李四",
+    size: "1.8KB",
+  },
+]);
 
 const documentColumns = [
-  { title: '文档名称', dataIndex: 'title', slotName: 'name' },
-  { title: '修改时间', dataIndex: 'updatedAt', render: ({ record }: { record: { updatedAt: Date } }) => formatDate(record.updatedAt) },
-  { title: '作者', dataIndex: 'author' },
-  { title: '大小', dataIndex: 'size' },
-  { title: '操作', slotName: 'actions', width: 150 }
-]
+  { title: "文档名称", dataIndex: "title", slotName: "name" },
+  {
+    title: "修改时间",
+    dataIndex: "updatedAt",
+    render: ({ record }: { record: { updatedAt: Date } }) =>
+      formatDate(record.updatedAt),
+  },
+  { title: "作者", dataIndex: "author" },
+  { title: "大小", dataIndex: "size" },
+  { title: "操作", slotName: "actions", width: 150 },
+];
 
 // 工具函数
 const formatDate = (date: Date) => {
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit', 
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date)
-}
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
 
 // 事件处理
 const createNewDocument = () => {
   // TODO: 实现创建新文档逻辑
-  navigateTo('/document/new')
-}
+  navigateTo("/document/new");
+};
 
 const createNewFolder = () => {
   // TODO: 实现创建文件夹逻辑
-  console.log('创建新文件夹')
-}
+  console.log("创建新文件夹");
+};
 
 const handleTreeSelect = (selectedKeys: string[]) => {
-  console.log('选中的节点:', selectedKeys)
-}
+  console.log("选中的节点:", selectedKeys);
+};
 
 const openDocument = (documentId: string) => {
-  navigateTo(`/document/${documentId}`)
-}
+  navigateTo(`/document/${documentId}`);
+};
 
 const renameDocument = (document: unknown) => {
   // TODO: 实现重命名逻辑
-  console.log('重命名文档:', document)
-}
+  console.log("重命名文档:", document);
+};
 
 const deleteDocument = (documentId: string) => {
   // TODO: 实现删除逻辑
-  console.log('删除文档:', documentId)
-}
+  console.log("删除文档:", documentId);
+};
 </script>
 
 <style scoped>
@@ -299,4 +307,4 @@ const deleteDocument = (documentId: string) => {
 .document-name:hover {
   text-decoration: underline;
 }
-</style> 
+</style>
