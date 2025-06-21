@@ -20,11 +20,7 @@
         <!-- 左侧目录树 -->
         <div class="sidebar">
           <ACard title="文档目录" :bordered="false">
-            <ATree 
-              :data="documentTree" 
-              :default-expand-all="true"
-              @select="handleTreeSelect"
-            >
+            <ATree :data="documentTree" :default-expand-all="true" @select="handleTreeSelect">
               <template #title="nodeData">
                 <div class="tree-node">
                   <IconFolder v-if="nodeData.type === 'folder'" />
@@ -42,13 +38,8 @@
           <div class="recent-section">
             <h3>最近访问</h3>
             <div class="document-grid">
-              <ACard 
-                v-for="doc in recentDocuments" 
-                :key="doc.id"
-                class="document-card"
-                hoverable
-                @click="openDocument(doc.id)"
-              >
+              <ACard v-for="doc in recentDocuments" :key="doc.id" class="document-card" hoverable
+                @click="openDocument(doc.id)">
                 <div class="document-info">
                   <div class="document-title">{{ doc.title }}</div>
                   <div class="document-meta">
@@ -63,17 +54,19 @@
           <!-- 我的文档 -->
           <div class="documents-section">
             <h3>我的文档</h3>
-            <ATable 
-              :data="myDocuments" 
-              :columns="documentColumns"
-              :pagination="false"
-            >
+            <ATable :data="myDocuments" :columns="documentColumns" :pagination="false">
               <template #name="{ record }">
-                <div class="document-name" @click="openDocument(record.id)">
+                <div v-if="editingDocumentId !== record.id" class="document-name" @click="openDocument(record.id)">
                   <IconFile />
                   <span>{{ record.title }}</span>
                 </div>
+                <div v-else class="document-name-editing">
+                  <AInput ref="editingInputRef" v-model="editingTitle" size="small" style="width: 200px"
+                    @press-enter="submitRename(record)" @blur="submitRename(record)"
+                    @keydown.esc="editingDocumentId = undefined" />
+                </div>
               </template>
+
               <template #actions="{ record }">
                 <AButton size="mini" @click="renameDocument(record)">重命名</AButton>
                 <AButton size="mini" status="danger" @click="deleteDocument(record.id)">删除</AButton>
@@ -83,69 +76,35 @@
         </div>
       </div>
     </div>
+    <!-- 新建文件夹弹窗 -->
+    <AModal v-model:visible="folderModalVisible" title="新建文件夹" @ok="submitNewFolder" @cancel="cancelNewFolder">
+      <AInput v-model="newFolderName" placeholder="请输入文件夹名称" @press-enter="submitNewFolder" />
+    </AModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { IconPlus, IconFolder, IconFile } from '@arco-design/web-vue/es/icon'
-
+import { useDocumentStore, type CustomDocument } from '@/stores/document'
+import { useFolderStore } from '@/stores/folder'
+import type { Input } from '@arco-design/web-vue'
 // 页面标题
 useHead({
   title: '首页 - 协同文档编辑器'
 })
 
-// 模拟数据
-const documentTree = ref([
-  {
-    key: '1',
-    title: '工作文档',
-    type: 'folder',
-    children: [
-      { key: '1-1', title: '项目计划.md', type: 'document' },
-      { key: '1-2', title: '需求文档.md', type: 'document' }
-    ]
-  },
-  {
-    key: '2', 
-    title: '个人笔记',
-    type: 'folder',
-    children: [
-      { key: '2-1', title: '学习笔记.md', type: 'document' }
-    ]
-  }
-])
+// 引入文档store
+const documentStore = useDocumentStore();
+const folderStore = useFolderStore();
+const myDocuments = computed(() => documentStore.allDocuments)
+const recentDocuments = computed(() => documentStore.recentDocuments)
+const documentTree = computed(() => documentStore.documentTree)
 
-const recentDocuments = ref([
-  {
-    id: '1',
-    title: '项目技术方案',
-    updatedAt: new Date('2024-01-15'),
-    author: '张三'
-  },
-  {
-    id: '2', 
-    title: '产品需求文档',
-    updatedAt: new Date('2024-01-14'),
-    author: '李四'
-  }
-])
+onMounted(async () => {
+  await documentStore.loadDocumentTree()
+  await documentStore.loadRecentDocuments()
+})
 
-const myDocuments = ref([
-  {
-    id: '1',
-    title: '项目技术方案',
-    updatedAt: new Date('2024-01-15'),
-    author: '张三',
-    size: '2.3KB'
-  },
-  {
-    id: '2',
-    title: '产品需求文档', 
-    updatedAt: new Date('2024-01-14'),
-    author: '李四',
-    size: '1.8KB'
-  }
-])
 
 const documentColumns = [
   { title: '文档名称', dataIndex: 'title', slotName: 'name' },
@@ -156,10 +115,11 @@ const documentColumns = [
 ]
 
 // 工具函数
-const formatDate = (date: Date) => {
+function formatDate(date: Date) {
+
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
-    month: '2-digit', 
+    month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
@@ -167,32 +127,91 @@ const formatDate = (date: Date) => {
 }
 
 // 事件处理
-const createNewDocument = () => {
+const createNewDocument = async () => {
   // TODO: 实现创建新文档逻辑
   navigateTo('/document/new')
 }
 
-const createNewFolder = () => {
-  // TODO: 实现创建文件夹逻辑
-  console.log('创建新文件夹')
-}
+// 新建文件夹逻辑
+const folderModalVisible = ref(false)
+const newFolderName = ref('')
+const selectedFolderId = ref<string | null>(null)
 
-const handleTreeSelect = (selectedKeys: string[]) => {
-  console.log('选中的节点:', selectedKeys)
+const createNewFolder = () => {
+  folderModalVisible.value = true
+}
+type Node = {
+  type: string;
+  id: string;
+};
+const handleTreeSelect = (_: unknown, { node }: { node: Node }) => {
+  if (node?.type === 'folder') {
+    selectedFolderId.value = node.id
+    console.log('选中的文件夹 ID:', node.id)
+  } else {
+    selectedFolderId.value = null
+    console.log('选中的是文档，忽略')
+  }
+}
+const submitNewFolder = async () => {
+  const name = newFolderName.value.trim()
+  if (!name) return
+  const res = await folderStore.createFolder(name, selectedFolderId.value)
+  if (res?.status === 200) {
+    await documentStore.loadDocumentTree()
+    // await documentStore.loadRecentDocuments()
+  }
+  folderModalVisible.value = false
+  newFolderName.value = ''
+}
+const cancelNewFolder = () => {
+  folderModalVisible.value = false
+  newFolderName.value = ''
 }
 
 const openDocument = (documentId: string) => {
   navigateTo(`/document/${documentId}`)
 }
+// 文档重命名
+const editingDocumentId = ref<string | undefined>(undefined)
+const editingTitle = ref('')
+const editingInputRef = ref<InstanceType<typeof Input> | null>(null)
 
-const renameDocument = (document: unknown) => {
-  // TODO: 实现重命名逻辑
-  console.log('重命名文档:', document)
+const renameDocument = (document: Partial<CustomDocument>) => {
+  // 实现重命名逻辑
+  editingDocumentId.value = document.id
+  editingTitle.value = document.title!
+  nextTick(() => {
+    editingInputRef.value?.focus?.()
+  })
+}
+// 提交重命名
+const submitRename = async (document: Partial<CustomDocument>) => {
+  const newTitle = editingTitle.value.trim()
+  if (!newTitle || newTitle === document.title) {
+    editingDocumentId.value = undefined
+    return
+  }
+  const updatedDoc = { title: newTitle }
+
+  const response = await documentStore.updateDocument(document.id!, updatedDoc)
+
+  if (response?.status === 200) {
+    console.log("文件名更新成功")
+    await documentStore.loadDocumentTree()
+    await documentStore.loadRecentDocuments()
+  }
+  editingDocumentId.value = undefined
 }
 
-const deleteDocument = (documentId: string) => {
-  // TODO: 实现删除逻辑
+const deleteDocument = async (documentId: string) => {
+  // 实现删除逻辑
   console.log('删除文档:', documentId)
+  const response = await documentStore.deleteDocument(documentId)
+  if (response.status === 200) {
+    await documentStore.loadDocumentTree()
+    await documentStore.loadRecentDocuments()
+  }
 }
 </script>
 
@@ -296,7 +315,17 @@ const deleteDocument = (documentId: string) => {
   color: #165dff;
 }
 
+.document-name-editing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .document-name:hover {
   text-decoration: underline;
 }
-</style> 
+
+.folder-create {
+  margin-top: 16px;
+}
+</style>
