@@ -15,50 +15,49 @@
       
       <!-- 工具栏 -->
       <div class="toolbar">
-        <AButton 
-          size="small" 
-          :type="editor?.isActive('bold') ? 'primary' : 'secondary'"
-          @click="toggleBold"
-        >
-          <strong>B</strong>
-        </AButton>
-        <AButton 
-          size="small"
-          :type="editor?.isActive('italic') ? 'primary' : 'secondary'" 
-          @click="toggleItalic"
-        >
-          <em>I</em>
-        </AButton>
+        <AButtonGroup>
+          <ADropdown @select="(level: string | number) => toggleHeading(level as 1 | 2 | 3)">
+            <AButton size="small">
+              <Icon name="ri:heading" /> <Icon name="ri:arrow-down-s-line" />
+            </AButton>
+            <template #content>
+              <ADoption @click="toggleHeading(1)"><h1>标题 1</h1></ADoption>
+              <ADoption @click="toggleHeading(2)"><h2>标题 2</h2></ADoption>
+              <ADoption @click="toggleHeading(3)"><h3>标题 3</h3></ADoption>
+            </template>
+          </ADropdown>
+        </AButtonGroup>
         <ADivider direction="vertical" />
-        <AButton 
-          size="small"
-          :type="editor?.isActive('heading', { level: 1 }) ? 'primary' : 'secondary'"
-          @click="toggleHeading(1)"
-        >
-          H1
-        </AButton>
-        <AButton 
-          size="small"
-          :type="editor?.isActive('heading', { level: 2 }) ? 'primary' : 'secondary'"
-          @click="toggleHeading(2)"
-        >
-          H2
-        </AButton>
+        <AButtonGroup>
+           <AButton size="small" :type="isBulletList ? 'primary' : 'secondary'" @click="toggleBulletList">
+            <Icon name="ri:list-unordered" />
+          </AButton>
+          <AButton size="small" :type="isOrderedList ? 'primary' : 'secondary'" @click="toggleOrderedList">
+            <Icon name="ri:list-ordered" />
+          </AButton>
+           <AButton size="small" :type="isTaskList ? 'primary' : 'secondary'" @click="toggleTaskList">
+            <Icon name="ri:task-line" />
+          </AButton>
+        </AButtonGroup>
         <ADivider direction="vertical" />
-        <AButton 
-          size="small"
-          :type="editor?.isActive('bulletList') ? 'primary' : 'secondary'"
-          @click="toggleBulletList"
-        >
-          列表
-        </AButton>
-        <AButton 
-          size="small"
-          :type="editor?.isActive('codeBlock') ? 'primary' : 'secondary'"
-          @click="toggleCodeBlock"
-        >
-          代码
-        </AButton>
+        <AButtonGroup>
+          <AButton size="small" @click="setTextAlign('left')"><Icon name="ri:align-left" /></AButton>
+          <AButton size="small" @click="setTextAlign('center')"><Icon name="ri:align-center" /></AButton>
+          <AButton size="small" @click="setTextAlign('right')"><Icon name="ri:align-right" /></AButton>
+          <AButton size="small" @click="setTextAlign('justify')"><Icon name="ri:align-justify" /></AButton>
+        </AButtonGroup>
+        <ADivider direction="vertical" />
+        <AButtonGroup>
+          <AButton size="small" :type="isBlockquote ? 'primary' : 'secondary'" @click="toggleBlockquote">
+            <Icon name="ri:double-quotes-l" />
+          </AButton>
+          <AButton size="small" :type="isCodeBlock ? 'primary' : 'secondary'" @click="toggleCodeBlock">
+            <Icon name="ri:code-view" />
+          </AButton>
+          <AButton size="small" @click="setHorizontalRule">
+            <Icon name="ri:separator" />
+          </AButton>
+        </AButtonGroup>
       </div>
       
       <!-- 协作用户状态 -->
@@ -79,6 +78,7 @@
     </div>
     
     <!-- 编辑器主体 -->
+    <FloatingToolbar :editor="editor" />
     <div class="editor-container">
       <div class="editor-wrapper">
         <EditorContent 
@@ -93,6 +93,19 @@
 <script setup lang="ts">
 import { Editor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
+import { BubbleMenu } from '@tiptap/extension-bubble-menu'
+import Link from '@tiptap/extension-link'
+import Highlight from '@tiptap/extension-highlight'
+import Underline from '@tiptap/extension-underline'
+import Strike from '@tiptap/extension-strike'
+import { Color } from '@tiptap/extension-color'
+import TextStyle from '@tiptap/extension-text-style'
+import TextAlign from '@tiptap/extension-text-align'
+import Blockquote from '@tiptap/extension-blockquote'
+import HorizontalRule from '@tiptap/extension-horizontal-rule'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import { useTiptapToolbar } from '~/composables/useTiptapToolbar'
 
 // 获取路由参数
 const route = useRoute()
@@ -114,19 +127,62 @@ const onlineUsers = ref([
   { id: '3', name: '王五', color: '#ff7d00' }
 ])
 
+const {
+  isBlockquote,
+  isCodeBlock,
+  isBulletList,
+  isOrderedList,
+  isTaskList,
+  toggleHeading,
+  toggleBlockquote,
+  toggleCodeBlock,
+  toggleBulletList,
+  toggleOrderedList,
+  toggleTaskList,
+  setHorizontalRule,
+  setTextAlign,
+} = useTiptapToolbar(editor)
+
 // 初始化编辑器
 onMounted(() => {
   editor.value = new Editor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+      }),
+      BubbleMenu,
+      Highlight,
+      Underline,
+      Strike,
+      TextStyle,
+      Color,
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+      }),
+      Blockquote,
+      HorizontalRule,
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+      }),
+    ],
     content: `
       <h1>欢迎使用协同文档编辑器</h1>
-      <p>这是一个基于 Tiptap 的富文本编辑器，支持多人协同编辑。</p>
-      <h2>功能特性</h2>
-      <ul>
-        <li>富文本编辑</li>
-        <li>实时协同</li>
-        <li>版本历史</li>
-      </ul>
+      <p>这是一个功能丰富的 Tiptap 编辑器。<strong>试试选中文本，看看会发生什么？</strong></p>
+      <p style="text-align: center">支持文本对齐</p>
+      <p style="text-align: right">右对齐</p>
+      <ul><li>无序列表</li></ul>
+      <ol><li>有序列表</li></ol>
+      <ul data-type="taskList"><li data-checked="true">已完成任务</li><li data-checked="false">未完成任务</li></ul>
+      <blockquote>引用块，在这里写下你的想法吧！</blockquote>
+      <pre><code>console.log("Hello, World!")</code></pre>
+      <hr>
       <p>开始编辑您的文档吧！</p>
     `,
     editorProps: {
@@ -134,7 +190,7 @@ onMounted(() => {
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none',
       },
     },
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor: _editor }) => {
       // TODO: 实现自动保存逻辑
       console.log('文档内容已更新')
     }
@@ -147,27 +203,6 @@ onBeforeUnmount(() => {
     editor.value.destroy()
   }
 })
-
-// 编辑器操作方法
-const toggleBold = () => {
-  editor.value?.chain().focus().toggleBold().run()
-}
-
-const toggleItalic = () => {
-  editor.value?.chain().focus().toggleItalic().run()
-}
-
-const toggleHeading = (level: 1 | 2) => {
-  editor.value?.chain().focus().toggleHeading({ level }).run()
-}
-
-const toggleBulletList = () => {
-  editor.value?.chain().focus().toggleBulletList().run()
-}
-
-const toggleCodeBlock = () => {
-  editor.value?.chain().focus().toggleCodeBlock().run()
-}
 
 const saveTitle = () => {
   // TODO: 实现标题保存逻辑
@@ -206,10 +241,12 @@ onMounted(() => {
   border-bottom: 1px solid #e5e6eb;
   background: #fff;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .document-title-section {
   flex: 1;
+  min-width: 200px;
 }
 
 .title-input {
@@ -233,12 +270,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .collaboration-status {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
 .online-users {
@@ -270,30 +309,53 @@ onMounted(() => {
   color: #1d2129;
 }
 
-.editor-content :deep(.ProseMirror h1) {
-  font-size: 2em;
+.editor-content :deep(h1),
+.editor-content :deep(h2),
+.editor-content :deep(h3) {
   font-weight: bold;
-  margin: 1em 0 0.5em 0;
-  line-height: 1.2;
-}
-
-.editor-content :deep(.ProseMirror h2) {
-  font-size: 1.5em;
-  font-weight: bold;
-  margin: 1em 0 0.5em 0;
   line-height: 1.3;
+  margin: 1.2em 0 0.6em 0;
 }
 
-.editor-content :deep(.ProseMirror p) {
-  margin: 0.5em 0;
-}
+.editor-content :deep(h1) { font-size: 1.8em; }
+.editor-content :deep(h2) { font-size: 1.5em; }
+.editor-content :deep(h3) { font-size: 1.25em; }
 
-.editor-content :deep(.ProseMirror ul) {
+.editor-content :deep(p) { margin: 0.5em 0; }
+
+.editor-content :deep(ul),
+.editor-content :deep(ol) {
   padding-left: 1.5em;
-  margin: 0.5em 0;
+  margin: 0.8em 0;
 }
 
-.editor-content :deep(.ProseMirror pre) {
+.editor-content :deep(ul[data-type="taskList"]) {
+  list-style: none;
+  padding: 0;
+}
+
+.editor-content :deep(ul[data-type="taskList"] li) {
+  display: flex;
+  align-items: center;
+  margin: 0.2em 0;
+}
+
+.editor-content :deep(ul[data-type="taskList"] li > label) {
+  margin-right: 0.5em;
+}
+
+.editor-content :deep(ul[data-type="taskList"] li > div) {
+  flex: 1;
+}
+
+.editor-content :deep(blockquote) {
+  border-left: 3px solid #e5e6eb;
+  padding-left: 1em;
+  margin: 1em 0;
+  color: #86909c;
+}
+
+.editor-content :deep(pre) {
   background: #f7f8fa;
   border-radius: 4px;
   padding: 12px;
@@ -303,11 +365,17 @@ onMounted(() => {
   overflow-x: auto;
 }
 
-.editor-content :deep(.ProseMirror code) {
+.editor-content :deep(code) {
   background: #f7f8fa;
   padding: 2px 4px;
   border-radius: 3px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.9em;
+}
+
+.editor-content :deep(hr) {
+  border: none;
+  border-top: 1px solid #e5e6eb;
+  margin: 1.5em 0;
 }
 </style> 
