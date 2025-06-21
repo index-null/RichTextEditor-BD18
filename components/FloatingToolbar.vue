@@ -58,6 +58,7 @@
 
 <script setup lang="ts">
 import { BubbleMenu, type Editor } from '@tiptap/vue-3'
+import { toRef } from 'vue';
 import { useTiptapToolbar } from '~/composables/useTiptapToolbar'
 
 const props = defineProps<{

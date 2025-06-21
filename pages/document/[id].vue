@@ -106,6 +106,8 @@ import HorizontalRule from '@tiptap/extension-horizontal-rule'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import { useTiptapToolbar } from '~/composables/useTiptapToolbar'
+import { useHead, useRoute } from 'nuxt/app'
+import { ref, shallowRef, onMounted, onBeforeUnmount } from 'vue'
 
 // 获取路由参数
 const route = useRoute()

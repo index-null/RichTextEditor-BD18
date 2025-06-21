@@ -149,7 +149,7 @@ const myDocuments = ref([
 
 const documentColumns = [
   { title: '文档名称', dataIndex: 'title', slotName: 'name' },
-  { title: '修改时间', dataIndex: 'updatedAt', render: ({ record }: any) => formatDate(record.updatedAt) },
+  { title: '修改时间', dataIndex: 'updatedAt', render: ({ record }: { record: { updatedAt: Date } }) => formatDate(record.updatedAt) },
   { title: '作者', dataIndex: 'author' },
   { title: '大小', dataIndex: 'size' },
   { title: '操作', slotName: 'actions', width: 150 }
@@ -185,7 +185,7 @@ const openDocument = (documentId: string) => {
   navigateTo(`/document/${documentId}`)
 }
 
-const renameDocument = (document: any) => {
+const renameDocument = (document: unknown) => {
   // TODO: 实现重命名逻辑
   console.log('重命名文档:', document)
 }

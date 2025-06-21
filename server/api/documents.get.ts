@@ -1,5 +1,5 @@
 // 获取文档列表API
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (_event) => {
   // 模拟文档数据
   const mockDocuments = [
     {
