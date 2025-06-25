@@ -1,63 +1,79 @@
 <template>
   <div class="app-layout">
-    <ALayout>
-      <!-- 顶部导航栏 -->
-      <ALayoutHeader class="header">
-        <div class="header-content">
-          <div class="logo">
-            <h2>协同文档编辑器</h2>
-          </div>
-          <div class="header-actions">
-            <!-- 用户相关操作 -->
-            <AButton type="primary">登录</AButton>
-          </div>
-        </div>
-      </ALayoutHeader>
-      
-      <!-- 主要内容区域 -->
-      <ALayoutContent class="main-content">
-        <slot />
-      </ALayoutContent>
-    </ALayout>
+    <AppHeader />
+    <main class="app-main">
+      <slot />
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
+// 使用主题
+useTheme()
+
 // 页面标题
 useHead({
   title: '协同文档编辑器'
 })
 </script>
 
+<style>
+/* 全局样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#__nuxt {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  background-color: var(--color-bg-1);
+  color: var(--color-text-1);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Arco Design 暗黑模式样式 */
+body[arco-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-fill-2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-fill-3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fill-4);
+}
+</style>
+
 <style scoped>
 .app-layout {
   min-height: 100vh;
-}
-
-.header {
-  background: #fff;
-  border-bottom: 1px solid #e5e6eb;
-  padding: 0;
-}
-
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 64px;
+  flex-direction: column;
 }
 
-.logo h2 {
-  margin: 0;
-  color: #1d2129;
-}
-
-.main-content {
-  padding: 20px;
-  background: #f7f8fa;
-  min-height: calc(100vh - 64px);
+.app-main {
+  flex: 1;
+  overflow: auto;
 }
 </style> 

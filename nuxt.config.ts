@@ -11,7 +11,8 @@ export default defineNuxtConfig({
   
   // CSS配置
   css: [
-    '@arco-design/web-vue/dist/arco.css'
+    '@arco-design/web-vue/dist/arco.css',
+    '~/assets/css/arco-dark.css'
   ],
   
   // 模块配置
@@ -20,7 +21,8 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@nuxt/eslint',
     '@nuxt/icon',
-    '@nuxt/devtools'
+    '@nuxt/devtools',
+    '@nuxtjs/color-mode'
   ],
   
   // TypeScript配置

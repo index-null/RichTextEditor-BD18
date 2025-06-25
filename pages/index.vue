@@ -1,47 +1,121 @@
 <template>
   <div class="home-page">
-    <div class="page-container">
-      <!-- 页面标题和操作 -->
-      <div class="page-header">
-        <h1>我的文档</h1>
-        <div class="actions">
-          <AButton type="primary" @click="createNewDocument">
-            <IconPlus />
+    <!-- 欢迎区域 -->
+    <div class="welcome-section">
+      <div class="welcome-content">
+        <h1 class="welcome-title">
+          欢迎回来，
+          <span class="gradient-text">{{ userName }}</span>
+        </h1>
+        <p class="welcome-subtitle">今天想要创建什么样的文档？</p>
+        
+        <!-- 快速操作 -->
+        <div class="quick-actions">
+          <AButton type="primary" size="large" @click="createNewDocument">
+            <template #icon><Icon name="ri:add-line" /></template>
             新建文档
           </AButton>
-          <AButton @click="createNewFolder">
-            <IconFolder />
-            新建文件夹
+          <AButton size="large" @click="showImportModal = true">
+            <template #icon><Icon name="ri:upload-2-line" /></template>
+            导入文档
+          </AButton>
+          <AButton size="large" @click="showTemplateModal = true">
+            <template #icon><Icon name="ri:file-copy-line" /></template>
+            从模板创建
           </AButton>
         </div>
       </div>
+      
+      <!-- 统计卡片 -->
+      <div class="stat-cards">
+        <ACard class="stat-card" :bordered="false">
+          <AStatistic 
+            title="文档总数" 
+            :value="totalDocuments"
+            :value-style="{ color: 'rgb(var(--primary-6))' }"
+          >
+            <template #prefix>
+              <Icon name="ri:file-text-line" />
+            </template>
+          </AStatistic>
+        </ACard>
+        <ACard class="stat-card" :bordered="false">
+          <AStatistic 
+            title="今日编辑" 
+            :value="todayEdited"
+            :value-style="{ color: 'rgb(var(--success-6))' }"
+          >
+            <template #prefix>
+              <Icon name="ri:edit-line" />
+            </template>
+          </AStatistic>
+        </ACard>
+        <ACard class="stat-card" :bordered="false">
+          <AStatistic 
+            title="协作人数" 
+            :value="collaborators"
+            :value-style="{ color: 'rgb(var(--warning-6))' }"
+          >
+            <template #prefix>
+              <Icon name="ri:team-line" />
+            </template>
+          </AStatistic>
+        </ACard>
+      </div>
+    </div>
 
-      <div class="content-layout">
-        <!-- 左侧目录树 -->
-        <div class="sidebar">
-          <ACard title="文档目录" :bordered="false">
-            <ATree 
-              :data="documentTree" 
-              :default-expand-all="true"
-              @select="handleTreeSelect"
-            >
-              <template #title="nodeData">
-                <div class="tree-node">
-                  <IconFolder v-if="nodeData.type === 'folder'" />
-                  <IconFile v-else />
-                  <span class="node-title">{{ nodeData.title }}</span>
-                </div>
-              </template>
-            </ATree>
+    <!-- 主要内容区 -->
+    <div class="main-section">
+      <ARow :gutter="24">
+        <!-- 左侧文档树 -->
+        <ACol :xs="24" :sm="24" :md="8" :lg="6">
+          <ACard title="文档目录" :bordered="false" class="folder-card">
+            <template #extra>
+              <AButton type="text" size="small" @click="createNewFolder">
+                <template #icon><Icon name="ri:add-line" /></template>
+              </AButton>
+            </template>
+            
+            <ASpin :loading="loading" tip="加载中...">
+              <ATree 
+                v-if="documentTree.length > 0"
+                :data="documentTree" 
+                :default-expand-all="true"
+                :draggable="true"
+                @select="handleTreeSelect"
+                @drop="handleTreeDrop"
+              >
+                <template #title="nodeData">
+                  <div class="tree-node">
+                    <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
+                    <span class="node-title">{{ nodeData.title }}</span>
+                    <div class="node-actions">
+                      <ADropdown trigger="click" @select="(value) => handleNodeAction(value, nodeData)">
+                        <Icon name="ri:more-line" class="action-icon" />
+                        <template #content>
+                          <ADoption value="rename">重命名</ADoption>
+                          <ADoption value="delete">删除</ADoption>
+                        </template>
+                      </ADropdown>
+                    </div>
+                  </div>
+                </template>
+              </ATree>
+              <AEmpty v-else description="暂无文档" />
+            </ASpin>
           </ACard>
-        </div>
+        </ACol>
 
-        <!-- 右侧主内容区 -->
-        <div class="main-content">
-          <!-- 最近访问 -->
-          <div class="recent-section">
-            <h3>最近访问</h3>
-            <div class="document-grid">
+        <!-- 右侧内容区 -->
+        <ACol :xs="24" :sm="24" :md="16" :lg="18">
+          <!-- 最近文档 -->
+          <div class="content-section">
+            <div class="section-header">
+              <h2 class="section-title">最近文档</h2>
+              <ALink @click="navigateTo('/documents')">查看全部</ALink>
+            </div>
+            
+            <div v-if="recentDocuments.length > 0" class="document-grid">
               <ACard 
                 v-for="doc in recentDocuments" 
                 :key="doc.id"
@@ -49,53 +123,206 @@
                 hoverable
                 @click="openDocument(doc.id)"
               >
-                <div class="document-info">
-                  <div class="document-title">{{ doc.title }}</div>
-                  <div class="document-meta">
-                    <span>{{ formatDate(doc.updatedAt) }}</span>
-                    <span>{{ doc.author }}</span>
+                <template #cover>
+                  <div class="document-preview">
+                    <Icon name="ri:file-text-line" :size="48" />
                   </div>
-                </div>
+                </template>
+                
+                <ACardMeta>
+                  <template #title>
+                    <div class="document-title">{{ doc.title }}</div>
+                  </template>
+                  <template #description>
+                    <div class="document-meta">
+                      <span><Icon name="ri:time-line" /> {{ formatDate(doc.updatedAt) }}</span>
+                      <span><Icon name="ri:user-line" /> {{ doc.author }}</span>
+                    </div>
+                  </template>
+                </ACardMeta>
+                
+                <template #actions>
+                  <span><Icon name="ri:star-line" /></span>
+                  <span><Icon name="ri:share-line" /></span>
+                  <ADropdown @select="(value) => handleDocAction(value, doc)">
+                    <span><Icon name="ri:more-line" /></span>
+                    <template #content>
+                      <ADoption value="rename">重命名</ADoption>
+                      <ADoption value="duplicate">复制</ADoption>
+                      <ADoption value="delete">删除</ADoption>
+                    </template>
+                  </ADropdown>
+                </template>
               </ACard>
             </div>
+            <AEmpty v-else description="暂无最近文档" />
           </div>
 
-          <!-- 我的文档 -->
-          <div class="documents-section">
-            <h3>我的文档</h3>
+          <!-- 文档列表 -->
+          <div class="content-section">
+            <div class="section-header">
+              <h2 class="section-title">所有文档</h2>
+              <ASpace>
+                <AInput 
+                  v-model="searchKeyword"
+                  placeholder="搜索文档"
+                  allow-clear
+                  @input="handleSearch"
+                >
+                  <template #prefix>
+                    <Icon name="ri:search-line" />
+                  </template>
+                </AInput>
+                <ASelect v-model="sortBy" placeholder="排序方式" style="width: 120px">
+                  <AOption value="updatedAt">最近修改</AOption>
+                  <AOption value="createdAt">创建时间</AOption>
+                  <AOption value="title">名称</AOption>
+                </ASelect>
+              </ASpace>
+            </div>
+            
             <ATable 
-              :data="myDocuments" 
+              :data="filteredDocuments" 
               :columns="documentColumns"
-              :pagination="false"
+              :pagination="{
+                pageSize: 10,
+                showTotal: true,
+                showJumper: true,
+                showPageSize: true
+              }"
+              :loading="loading"
             >
               <template #name="{ record }">
-                <div class="document-name" @click="openDocument(record.id)">
-                  <IconFile />
+                <div class="table-document-name" @click="openDocument(record.id)">
+                  <Icon name="ri:file-text-line" />
                   <span>{{ record.title }}</span>
+                  <ABadge v-if="record.isNew" text="New" :offset="[10, 0]" />
                 </div>
               </template>
+              <template #updatedAt="{ record }">
+                <ATooltip :content="formatFullDate(record.updatedAt)">
+                  {{ formatDate(record.updatedAt) }}
+                </ATooltip>
+              </template>
               <template #actions="{ record }">
-                <AButton size="mini" @click="renameDocument(record)">重命名</AButton>
-                <AButton size="mini" status="danger" @click="deleteDocument(record.id)">删除</AButton>
+                <ASpace>
+                  <AButton type="text" size="mini" @click="openDocument(record.id)">
+                    <template #icon><Icon name="ri:edit-line" /></template>
+                  </AButton>
+                  <AButton type="text" size="mini" @click="shareDocument(record)">
+                    <template #icon><Icon name="ri:share-line" /></template>
+                  </AButton>
+                  <APopconfirm 
+                    content="确定要删除这个文档吗？" 
+                    @ok="deleteDocument(record.id)"
+                  >
+                    <AButton type="text" size="mini" status="danger">
+                      <template #icon><Icon name="ri:delete-bin-line" /></template>
+                    </AButton>
+                  </APopconfirm>
+                </ASpace>
               </template>
             </ATable>
           </div>
-        </div>
-      </div>
+        </ACol>
+      </ARow>
     </div>
+
+    <!-- 导入文档模态框 -->
+    <AModal 
+      v-model:visible="showImportModal" 
+      title="导入文档"
+      :width="480"
+      @ok="handleImport"
+    >
+      <AUpload
+        draggable
+        accept=".md,.txt,.docx"
+        :custom-request="customUpload"
+      >
+        <template #upload-button>
+          <div class="upload-demo-draggable">
+            <Icon name="ri:upload-cloud-line" :size="48" />
+            <div class="upload-text">
+              点击或拖拽文件到此处上传
+            </div>
+            <div class="upload-hint">
+              支持 .md, .txt, .docx 格式
+            </div>
+          </div>
+        </template>
+      </AUpload>
+    </AModal>
+
+    <!-- 模板选择模态框 -->
+    <AModal 
+      v-model:visible="showTemplateModal" 
+      title="选择模板"
+      :width="720"
+      :footer="false"
+    >
+      <div class="template-grid">
+        <ACard 
+          v-for="template in templates" 
+          :key="template.id"
+          class="template-card"
+          hoverable
+          @click="createFromTemplate(template)"
+        >
+          <div class="template-icon">
+            <Icon :name="template.icon" :size="48" />
+          </div>
+          <h4>{{ template.name }}</h4>
+          <p>{{ template.description }}</p>
+        </ACard>
+      </div>
+    </AModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { IconPlus, IconFolder, IconFile } from '@arco-design/web-vue/es/icon'
+import { Message } from '@arco-design/web-vue'
 
-// 页面标题
-useHead({
-  title: '首页 - 协同文档编辑器'
-})
+// 类型定义
+interface Document {
+  id: string
+  title: string
+  updatedAt: Date
+  createdAt: Date
+  author: string
+  size: string
+  isNew?: boolean
+}
 
-// 模拟数据
-const documentTree = ref([
+interface TreeNode {
+  key: string
+  title: string
+  type: 'folder' | 'document'
+  children?: TreeNode[]
+}
+
+interface Template {
+  id: string
+  name: string
+  description: string
+  icon: string
+}
+
+// 响应式数据
+const userName = ref('用户')
+const loading = ref(false)
+const searchKeyword = ref('')
+const sortBy = ref('updatedAt')
+const showImportModal = ref(false)
+const showTemplateModal = ref(false)
+
+// 统计数据
+const totalDocuments = ref(23)
+const todayEdited = ref(5)
+const collaborators = ref(8)
+
+// 文档数据
+const documentTree = ref<TreeNode[]>([
   {
     key: '1',
     title: '工作文档',
@@ -115,48 +342,170 @@ const documentTree = ref([
   }
 ])
 
-const recentDocuments = ref([
+const recentDocuments = ref<Pick<Document, 'id' | 'title' | 'updatedAt' | 'author' | 'isNew'>[]>([
   {
     id: '1',
     title: '项目技术方案',
     updatedAt: new Date('2024-01-15'),
-    author: '张三'
+    author: '张三',
+    isNew: true
   },
   {
     id: '2', 
     title: '产品需求文档',
     updatedAt: new Date('2024-01-14'),
     author: '李四'
+  },
+  {
+    id: '3',
+    title: '会议纪要',
+    updatedAt: new Date('2024-01-13'),
+    author: '王五'
   }
 ])
 
-const myDocuments = ref([
+const myDocuments = ref<Document[]>([
   {
     id: '1',
     title: '项目技术方案',
     updatedAt: new Date('2024-01-15'),
+    createdAt: new Date('2024-01-10'),
     author: '张三',
-    size: '2.3KB'
+    size: '2.3KB',
+    isNew: true
   },
   {
     id: '2',
     title: '产品需求文档', 
     updatedAt: new Date('2024-01-14'),
+    createdAt: new Date('2024-01-09'),
     author: '李四',
     size: '1.8KB'
+  },
+  {
+    id: '3',
+    title: '会议纪要',
+    updatedAt: new Date('2024-01-13'),
+    createdAt: new Date('2024-01-08'),
+    author: '王五',
+    size: '0.9KB'
   }
 ])
 
-const documentColumns = [
-  { title: '文档名称', dataIndex: 'title', slotName: 'name' },
-  { title: '修改时间', dataIndex: 'updatedAt', render: ({ record }: { record: { updatedAt: Date } }) => formatDate(record.updatedAt) },
-  { title: '作者', dataIndex: 'author' },
-  { title: '大小', dataIndex: 'size' },
-  { title: '操作', slotName: 'actions', width: 150 }
+// 模板数据
+const templates: Template[] = [
+  {
+    id: '1',
+    name: '会议纪要',
+    description: '用于记录会议内容和决议',
+    icon: 'ri:file-list-3-line'
+  },
+  {
+    id: '2',
+    name: '项目提案',
+    description: '项目计划和提案模板',
+    icon: 'ri:lightbulb-line'
+  },
+  {
+    id: '3',
+    name: '技术文档',
+    description: '技术规范和API文档',
+    icon: 'ri:code-s-slash-line'
+  },
+  {
+    id: '4',
+    name: '周报模板',
+    description: '每周工作总结模板',
+    icon: 'ri:calendar-check-line'
+  }
 ]
+
+// 表格列配置
+const documentColumns = [
+  { 
+    title: '文档名称', 
+    dataIndex: 'title', 
+    slotName: 'name',
+    ellipsis: true,
+    tooltip: true,
+    width: 300
+  },
+  { 
+    title: '最后修改', 
+    dataIndex: 'updatedAt', 
+    slotName: 'updatedAt',
+    width: 150
+  },
+  { 
+    title: '作者', 
+    dataIndex: 'author',
+    ellipsis: true,
+    width: 100
+  },
+  { 
+    title: '大小', 
+    dataIndex: 'size',
+    width: 80
+  },
+  { 
+    title: '操作', 
+    slotName: 'actions', 
+    width: 120,
+    align: 'center'
+  }
+]
+
+// 计算属性
+const filteredDocuments = computed(() => {
+  let docs = [...myDocuments.value]
+  
+  // 搜索过滤
+  if (searchKeyword.value) {
+    docs = docs.filter(doc => 
+      doc.title.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
+      doc.author.toLowerCase().includes(searchKeyword.value.toLowerCase())
+    )
+  }
+  
+  // 排序
+  docs.sort((a, b) => {
+    if (sortBy.value === 'title') {
+      return a.title.localeCompare(b.title)
+    } else {
+      // 安全的日期属性访问
+      const aValue = sortBy.value === 'updatedAt' ? a.updatedAt : a.createdAt
+      const bValue = sortBy.value === 'updatedAt' ? b.updatedAt : b.createdAt
+      // 确保日期值存在且转换为时间戳
+      const aTime = aValue instanceof Date ? aValue.getTime() : new Date(aValue).getTime()
+      const bTime = bValue instanceof Date ? bValue.getTime() : new Date(bValue).getTime()
+      return bTime - aTime
+    }
+  })
+  
+  return docs
+})
 
 // 工具函数
 const formatDate = (date: Date) => {
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  
+  if (days === 0) {
+    return '今天'
+  } else if (days === 1) {
+    return '昨天'
+  } else if (days < 7) {
+    return `${days} 天前`
+  } else {
+    return new Intl.DateTimeFormat('zh-CN', {
+      month: '2-digit',
+      day: '2-digit'
+    }).format(date)
+  }
+}
+
+const formatFullDate = (date: Date) => {
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
     month: '2-digit', 
@@ -168,92 +517,215 @@ const formatDate = (date: Date) => {
 
 // 事件处理
 const createNewDocument = () => {
-  // TODO: 实现创建新文档逻辑
   navigateTo('/document/new')
 }
 
 const createNewFolder = () => {
-  // TODO: 实现创建文件夹逻辑
-  console.log('创建新文件夹')
+  Message.info('创建文件夹功能开发中...')
 }
 
 const handleTreeSelect = (selectedKeys: string[]) => {
   console.log('选中的节点:', selectedKeys)
 }
 
+const handleTreeDrop = (_params: { dragNode: TreeNode; dropNode: TreeNode; dropPosition: number }) => {
+  Message.success('文档已移动')
+}
+
 const openDocument = (documentId: string) => {
   navigateTo(`/document/${documentId}`)
 }
 
-const renameDocument = (document: unknown) => {
-  // TODO: 实现重命名逻辑
-  console.log('重命名文档:', document)
+const shareDocument = (doc: Pick<Document, 'id' | 'title'>) => {
+  Message.info(`分享文档: ${doc.title}`)
 }
 
 const deleteDocument = (documentId: string) => {
-  // TODO: 实现删除逻辑
-  console.log('删除文档:', documentId)
+  loading.value = true
+  setTimeout(() => {
+    loading.value = false
+    Message.success('文档已删除')
+    myDocuments.value = myDocuments.value.filter(doc => doc.id !== documentId)
+  }, 1000)
+}
+
+const handleNodeAction = (action: string, node: TreeNode) => {
+  if (action === 'rename') {
+    Message.info(`重命名: ${node.title}`)
+  } else if (action === 'delete') {
+    Message.warning(`删除: ${node.title}`)
+  }
+}
+
+const handleDocAction = (action: string, doc: Pick<Document, 'id' | 'title'>) => {
+  if (action === 'rename') {
+    Message.info(`重命名: ${doc.title}`)
+  } else if (action === 'duplicate') {
+    Message.info(`复制: ${doc.title}`)
+  } else if (action === 'delete') {
+    deleteDocument(doc.id)
+  }
+}
+
+const handleSearch = () => {
+  // 搜索逻辑已在计算属性中实现
+}
+
+interface UploadOption {
+  onProgress: (percent: number) => void
+  onSuccess: (response: boolean) => void
+  onError: (error: Error) => void
+  file: { name: string }
+}
+
+const customUpload = (option: UploadOption) => {
+  const { onProgress, onSuccess, file } = option
+  // 模拟上传
+  onProgress(50)
+  setTimeout(() => {
+    onSuccess(true)
+    Message.success(`${file.name} 上传成功`)
+  }, 1000)
+}
+
+const handleImport = () => {
+  showImportModal.value = false
+  Message.success('文档导入成功')
+}
+
+const createFromTemplate = (template: Template) => {
+  showTemplateModal.value = false
+  Message.success(`正在使用"${template.name}"模板创建文档...`)
+  setTimeout(() => {
+    navigateTo('/document/new?template=' + template.id)
+  }, 500)
 }
 </script>
 
 <style scoped>
 .home-page {
-  max-width: 1200px;
+  padding: 24px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* 欢迎区域 */
+.welcome-section {
+  margin-bottom: 32px;
+}
+
+.welcome-content {
   margin-bottom: 24px;
 }
 
-.page-header h1 {
-  margin: 0;
-  color: #1d2129;
+.welcome-title {
+  font-size: 32px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-text-1);
 }
 
-.actions {
+.gradient-text {
+  background: linear-gradient(120deg, rgb(var(--primary-6)) 0%, rgb(var(--primary-5)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-subtitle {
+  font-size: 16px;
+  color: var(--color-text-3);
+  margin-bottom: 24px;
+}
+
+.quick-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.content-layout {
-  display: flex;
-  gap: 24px;
+/* 统计卡片 */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
 }
 
-.sidebar {
-  width: 280px;
-  flex-shrink: 0;
+.stat-card {
+  transition: all 0.3s;
 }
 
-.main-content {
-  flex: 1;
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 主要内容区 */
+.main-section {
+  margin-top: 32px;
+}
+
+.folder-card {
+  height: 100%;
+  min-height: 400px;
 }
 
 .tree-node {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 4px 0;
+  position: relative;
 }
 
 .node-title {
-  cursor: pointer;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.recent-section,
-.documents-section {
+.node-actions {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.tree-node:hover .node-actions {
+  opacity: 1;
+}
+
+.action-icon {
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.action-icon:hover {
+  background: var(--color-fill-2);
+}
+
+/* 内容区域 */
+.content-section {
   margin-bottom: 32px;
 }
 
-.recent-section h3,
-.documents-section h3 {
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
-  color: #1d2129;
 }
 
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  margin: 0;
+}
+
+/* 文档网格 */
 .document-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -262,41 +734,129 @@ const deleteDocument = (documentId: string) => {
 }
 
 .document-card {
-  cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
 }
 
 .document-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.document-info {
-  padding: 8px;
+.document-preview {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-fill-2);
+  color: var(--color-text-3);
 }
 
 .document-title {
   font-weight: 500;
-  margin-bottom: 8px;
-  color: #1d2129;
+  color: var(--color-text-1);
 }
 
 .document-meta {
   display: flex;
-  justify-content: space-between;
+  gap: 16px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--color-text-3);
 }
 
-.document-name {
+.document-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 表格样式 */
+.table-document-name {
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: #165dff;
+  color: rgb(var(--primary-6));
 }
 
-.document-name:hover {
+.table-document-name:hover {
   text-decoration: underline;
+}
+
+/* 上传区域 */
+.upload-demo-draggable {
+  padding: 40px;
+  text-align: center;
+  background: var(--color-fill-2);
+  border: 1px dashed var(--color-border-2);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.upload-demo-draggable:hover {
+  border-color: rgb(var(--primary-6));
+  background: var(--color-fill-3);
+}
+
+.upload-text {
+  margin-top: 12px;
+  color: var(--color-text-1);
+  font-size: 14px;
+}
+
+.upload-hint {
+  margin-top: 8px;
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+/* 模板网格 */
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.template-card {
+  text-align: center;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.template-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.template-icon {
+  margin-bottom: 16px;
+  color: rgb(var(--primary-6));
+}
+
+.template-card h4 {
+  margin: 0 0 8px 0;
+  color: var(--color-text-1);
+}
+
+.template-card p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .welcome-title {
+    font-size: 24px;
+  }
+  
+  .stat-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .document-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style> 

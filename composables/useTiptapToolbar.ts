@@ -1,5 +1,4 @@
 import type { Editor } from '@tiptap/vue-3'
-import { computed } from 'vue'
 
 export function useTiptapToolbar(editor: Ref<Editor | undefined>) {
   const isBold = computed(() => editor.value?.isActive('bold'))
