@@ -181,11 +181,24 @@
 
       <!-- 右侧操作 -->
       <div class="header-right">
-        <!-- 保存状态 -->
-        <div class="save-status">
-          <Icon v-if="saveStatus === 'saved'" name="ri:check-line" class="status-icon saved" />
-          <Icon v-else-if="saveStatus === 'saving'" name="ri:loader-4-line" class="status-icon saving" />
-          <span class="status-text">{{ saveStatusText }}</span>
+        <!-- 连接状态 -->
+        <div class="connection-status">
+          <Icon 
+            v-if="connectionStatus === 'connected'" 
+            name="ri:wifi-line" 
+            class="status-icon connected" 
+          />
+          <Icon 
+            v-else-if="connectionStatus === 'connecting'" 
+            name="ri:loader-4-line" 
+            class="status-icon connecting" 
+          />
+          <Icon 
+            v-else 
+            name="ri:wifi-off-line" 
+            class="status-icon disconnected" 
+          />
+          <span class="status-text">{{ connectionStatusText }}</span>
         </div>
 
         <!-- 协作用户 -->
@@ -193,7 +206,7 @@
           <AvatarGroup :max-count="3">
             <AAvatar 
               v-for="user in onlineUsers" 
-              :key="user.id"
+              :key="user.clientId"
               :size="32"
               :style="{ backgroundColor: user.color }"
             >
@@ -316,18 +329,24 @@ import Blockquote from '@tiptap/extension-blockquote'
 import HorizontalRule from '@tiptap/extension-horizontal-rule'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
+import Collaboration from '@tiptap/extension-collaboration'
+import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
+import * as Y from 'yjs'
+import { WebsocketProvider } from 'y-websocket'
 import { useTiptapToolbar } from '~/composables/useTiptapToolbar'
-import { Message } from '@arco-design/web-vue'
-import { AvatarGroup } from '@arco-design/web-vue'
+import { Message, AvatarGroup } from '@arco-design/web-vue'
 
 // 获取路由参数
 const route = useRoute()
 const documentId = route.params.id as string
 
+// Yjs 相关
+const ydoc = new Y.Doc()
+let provider: WebsocketProvider | null = null
+
 // 响应式数据
 const documentTitle = ref('无标题文档')
 const editor = shallowRef<Editor | undefined>(undefined)
-const saveStatus = ref<'saved' | 'saving' | 'error'>('saved')
 const showSidebar = ref(true)
 const sidebarTab = ref('outline')
 const lastEditTime = ref('刚刚')
@@ -336,13 +355,21 @@ const readingTime = ref(0)
 const currentLine = ref(1)
 const currentColumn = ref(1)
 const documentOutline = ref<Array<{ id: string; text: string; level: number }>>([])
+const connectionStatus = ref<'connecting' | 'connected' | 'disconnected'>('connecting')
+const onlineUsers = ref<Array<{ clientId: number; name: string; color: string }>>([])
 
-// 模拟在线用户数据
-const onlineUsers = ref([
-  { id: '1', name: '张三', color: '#165dff' },
-  { id: '2', name: '李四', color: '#00b42a' },
-  { id: '3', name: '王五', color: '#ff7d00' }
-])
+// 生成随机用户信息
+const generateUserInfo = () => {
+  const names = ['用户', '编辑者', '协作者', '访客']
+  const colors = ['#165dff', '#00b42a', '#ff7d00', '#f53f3f', '#722ed1', '#eb2f96']
+  
+  return {
+    name: names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 1000),
+    color: colors[Math.floor(Math.random() * colors.length)]
+  }
+}
+
+const userInfo = generateUserInfo()
 
 // 使用工具栏组合函数
 const {
@@ -362,14 +389,14 @@ const {
 } = useTiptapToolbar(editor)
 
 // 计算属性
-const saveStatusText = computed(() => {
-  switch (saveStatus.value) {
-    case 'saved':
-      return '已保存'
-    case 'saving':
-      return '保存中...'
-    case 'error':
-      return '保存失败'
+const connectionStatusText = computed(() => {
+  switch (connectionStatus.value) {
+    case 'connected':
+      return '已连接'
+    case 'connecting':
+      return '连接中...'
+    case 'disconnected':
+      return '连接断开'
     default:
       return ''
   }
@@ -382,20 +409,6 @@ const currentHeadingText = computed(() => {
   if (editor.value.isActive('heading', { level: 3 })) return '标题 3'
   return '正文'
 })
-
-// 自动保存
-let saveTimer: NodeJS.Timeout | null = null
-const autoSave = () => {
-  if (saveTimer) clearTimeout(saveTimer)
-  
-  saveStatus.value = 'saving'
-  saveTimer = setTimeout(() => {
-    // TODO: 实际保存逻辑
-    console.log('自动保存文档内容')
-    saveStatus.value = 'saved'
-    lastEditTime.value = '刚刚'
-  }, 2000)
-}
 
 // 更新文档统计信息
 const updateDocumentStats = () => {
@@ -419,11 +432,53 @@ const updateDocumentStats = () => {
   documentOutline.value = headings
 }
 
+// 初始化协同编辑
+const initCollaboration = () => {
+  // 创建 WebSocket 提供者
+  provider = new WebsocketProvider('ws://localhost:1234', `document-${documentId}`, ydoc)
+  
+  // 监听连接状态
+  provider.on('status', (event: { status: string }) => {
+    connectionStatus.value = event.status as 'connecting' | 'connected' | 'disconnected'
+    
+    if (event.status === 'connected') {
+      Message.success('协同编辑已连接')
+    } else if (event.status === 'disconnected') {
+      Message.warning('协同编辑连接断开')
+    }
+  })
+
+  // 监听意识状态变化（在线用户）
+  provider.awareness.on('change', () => {
+    const users: Array<{ clientId: number; name: string; color: string }> = []
+    
+    provider!.awareness.getStates().forEach((state, clientId) => {
+      if (state.user && clientId !== provider!.awareness.clientID) {
+        users.push({
+          clientId,
+          name: state.user.name,
+          color: state.user.color
+        })
+      }
+    })
+    
+    onlineUsers.value = users
+  })
+
+  // 设置当前用户信息
+  provider.awareness.setLocalStateField('user', userInfo)
+}
+
 // 初始化编辑器
 onMounted(() => {
+  // 先初始化协同编辑
+  initCollaboration()
+  
   editor.value = new Editor({
     extensions: [
       StarterKit.configure({
+        // 禁用内置的 History，因为协同编辑有自己的历史管理
+        history: false,
         heading: {
           levels: [1, 2, 3],
         },
@@ -447,49 +502,61 @@ onMounted(() => {
         openOnClick: false,
         autolink: true,
       }),
+      // 协同编辑扩展
+      Collaboration.configure({
+        document: ydoc,
+      }),
+      // 协同光标扩展
+      CollaborationCursor.configure({
+        provider: provider!,
+        user: userInfo,
+      }),
     ],
-    content: `
-      <h1>欢迎使用协同文档编辑器</h1>
-      <p>这是一个功能丰富的现代化编辑器，为您提供流畅的写作体验。</p>
-      
-      <h2>主要特性</h2>
-      <ul>
-        <li>丰富的格式化选项</li>
-        <li>实时自动保存</li>
-        <li>文档大纲导航</li>
-        <li>多人协同编辑</li>
-        <li>暗黑模式支持</li>
-      </ul>
-      
-      <h2>快捷键</h2>
-      <p>使用快捷键可以更高效地编辑文档：</p>
-      <ul>
-        <li><code>Ctrl+B</code> - 加粗</li>
-        <li><code>Ctrl+I</code> - 斜体</li>
-        <li><code>Ctrl+U</code> - 下划线</li>
-        <li><code>Ctrl+S</code> - 保存</li>
-      </ul>
-      
-      <blockquote>
-        <p>开始您的创作之旅吧！</p>
-      </blockquote>
-    `,
     editorProps: {
       attributes: {
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl focus:outline-none',
       },
     },
     onUpdate: ({ editor: _editor }) => {
-      autoSave()
       updateDocumentStats()
+      lastEditTime.value = '刚刚'
     },
     onSelectionUpdate: ({ editor: _editor }) => {
       // 更新光标位置
       const { from } = _editor.state.selection
-      const pos = _editor.view.coordsAtPos(from)
       // 简化的行列计算
       currentLine.value = Math.floor(from / 50) + 1
       currentColumn.value = (from % 50) + 1
+    },
+    onCreate: ({ editor: _editor }) => {
+      // 检查文档是否为空，如果为空则添加初始内容
+      if (_editor.isEmpty) {
+        // 等待协同连接建立后再设置初始内容
+        setTimeout(() => {
+          if (_editor.isEmpty) {
+            _editor.commands.setContent(`
+              <h1>欢迎使用协同文档编辑器</h1>
+              <p>这是一个功能丰富的现代化编辑器，支持多人实时协同编辑。</p>
+              
+              <h2>主要特性</h2>
+              <ul>
+                <li>🎨 丰富的格式化选项</li>
+                <li>👥 多人实时协同编辑</li>
+                <li>💾 自动同步保存</li>
+                <li>📋 文档大纲导航</li>
+                <li>🌙 暗黑模式支持</li>
+              </ul>
+              
+              <h2>开始编辑</h2>
+              <p>您可以直接在这里开始编辑内容。如果有其他用户同时在编辑，您将看到他们的光标和实时更改。</p>
+              
+              <blockquote>
+                <p>💡 提示：尝试打开多个浏览器标签页来体验协同编辑效果！</p>
+              </blockquote>
+            `)
+          }
+        }, 1000)
+      }
     }
   })
   
@@ -497,20 +564,19 @@ onMounted(() => {
   updateDocumentStats()
 })
 
-// 组件卸载时销毁编辑器
+// 组件卸载时销毁编辑器和连接
 onBeforeUnmount(() => {
   if (editor.value) {
     editor.value.destroy()
   }
-  if (saveTimer) {
-    clearTimeout(saveTimer)
+  if (provider) {
+    provider.destroy()
   }
 })
 
 // 事件处理函数
 const saveTitle = () => {
   console.log('保存标题:', documentTitle.value)
-  autoSave()
 }
 
 const toggleSidebar = () => {
@@ -577,8 +643,7 @@ onMounted(() => {
     if (e.ctrlKey || e.metaKey) {
       if (e.key === 's') {
         e.preventDefault()
-        autoSave()
-        Message.success('文档已保存')
+        Message.success('文档已自动保存')
       }
     }
   }
@@ -674,7 +739,7 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.save-status {
+.connection-status {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -686,13 +751,17 @@ onMounted(() => {
   font-size: 16px;
 }
 
-.status-icon.saved {
+.status-icon.connected {
   color: rgb(var(--success-6));
 }
 
-.status-icon.saving {
+.status-icon.connecting {
   color: rgb(var(--warning-6));
   animation: spin 1s linear infinite;
+}
+
+.status-icon.disconnected {
+  color: rgb(var(--danger-6));
 }
 
 @keyframes spin {
@@ -861,6 +930,32 @@ onMounted(() => {
 
 .editor-content :deep(a:hover) {
   text-decoration: underline;
+}
+
+/* 协同光标样式 */
+.editor-content :deep(.collaboration-cursor__caret) {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 1px solid #0d0d0d;
+  border-right: 1px solid #0d0d0d;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.editor-content :deep(.collaboration-cursor__label) {
+  position: absolute;
+  top: -1.4em;
+  left: -1px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  user-select: none;
+  color: #0d0d0d;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px 3px 3px 0;
+  white-space: nowrap;
 }
 
 /* 侧边栏 */
