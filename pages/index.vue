@@ -78,8 +78,8 @@
             
             <ASpin :loading="loading" tip="加载中...">
               <ATree 
-                v-if="documentTree.length > 0"
-                :data="documentTree" 
+                v-if="documentStore.documentTree.length > 0"
+                :data="documentStore.documentTree" 
                 :default-expand-all="true"
                 :draggable="true"
                 @select="handleTreeSelect"
@@ -115,9 +115,9 @@
               <ALink @click="navigateTo('/documents')">查看全部</ALink>
             </div>
             
-            <div v-if="recentDocuments.length > 0" class="document-grid">
+            <div v-if="documentStore.recentDocuments.length > 0" class="document-grid">
               <ACard 
-                v-for="doc in recentDocuments" 
+                v-for="doc in documentStore.recentDocuments" 
                 :key="doc.id"
                 class="document-card"
                 hoverable
@@ -282,10 +282,10 @@
 
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue'
-
+import { useDocumentStore } from '~/stores/document'
 // 类型定义
 interface Document {
-  id: string
+  id: number
   title: string
   updatedAt: Date
   createdAt: Date
@@ -316,81 +316,22 @@ const sortBy = ref('updatedAt')
 const showImportModal = ref(false)
 const showTemplateModal = ref(false)
 
+const documentStore=useDocumentStore()
+onMounted(async () => {
+  await documentStore.loadDocumentTree()
+  await documentStore.loadRecentDocuments()
+  console.log(myDocuments.value)
+})
+const myDocuments = computed(()=>{
+  return documentStore.myDocuments
+})
 // 统计数据
 const totalDocuments = ref(23)
 const todayEdited = ref(5)
 const collaborators = ref(8)
 
-// 文档数据
-const documentTree = ref<TreeNode[]>([
-  {
-    key: '1',
-    title: '工作文档',
-    type: 'folder',
-    children: [
-      { key: '1-1', title: '项目计划.md', type: 'document' },
-      { key: '1-2', title: '需求文档.md', type: 'document' }
-    ]
-  },
-  {
-    key: '2', 
-    title: '个人笔记',
-    type: 'folder',
-    children: [
-      { key: '2-1', title: '学习笔记.md', type: 'document' }
-    ]
-  }
-])
 
-const recentDocuments = ref<Pick<Document, 'id' | 'title' | 'updatedAt' | 'author' | 'isNew'>[]>([
-  {
-    id: '1',
-    title: '项目技术方案',
-    updatedAt: new Date('2024-01-15'),
-    author: '张三',
-    isNew: true
-  },
-  {
-    id: '2', 
-    title: '产品需求文档',
-    updatedAt: new Date('2024-01-14'),
-    author: '李四'
-  },
-  {
-    id: '3',
-    title: '会议纪要',
-    updatedAt: new Date('2024-01-13'),
-    author: '王五'
-  }
-])
 
-const myDocuments = ref<Document[]>([
-  {
-    id: '1',
-    title: '项目技术方案',
-    updatedAt: new Date('2024-01-15'),
-    createdAt: new Date('2024-01-10'),
-    author: '张三',
-    size: '2.3KB',
-    isNew: true
-  },
-  {
-    id: '2',
-    title: '产品需求文档', 
-    updatedAt: new Date('2024-01-14'),
-    createdAt: new Date('2024-01-09'),
-    author: '李四',
-    size: '1.8KB'
-  },
-  {
-    id: '3',
-    title: '会议纪要',
-    updatedAt: new Date('2024-01-13'),
-    createdAt: new Date('2024-01-08'),
-    author: '王五',
-    size: '0.9KB'
-  }
-])
 
 // 模板数据
 const templates: Template[] = [
@@ -486,11 +427,12 @@ const filteredDocuments = computed(() => {
 })
 
 // 工具函数
-const formatDate = (date: Date) => {
+const formatDate = (date: Date | string) => {
+  const d = typeof date === 'string' ? new Date(date) : date
   const now = new Date()
-  const diff = now.getTime() - date.getTime()
+  const diff = now.getTime() - d.getTime()
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
+
   if (days === 0) {
     return '今天'
   } else if (days === 1) {
@@ -501,18 +443,20 @@ const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('zh-CN', {
       month: '2-digit',
       day: '2-digit'
-    }).format(date)
+    }).format(d)
   }
 }
 
-const formatFullDate = (date: Date) => {
+
+const formatFullDate = (date: Date | string) => {
+  const d = typeof date === 'string' ? new Date(date) : date
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
     month: '2-digit', 
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
-  }).format(date)
+  }).format(d)
 }
 
 // 事件处理
@@ -532,7 +476,7 @@ const handleTreeDrop = (_params: { dragNode: TreeNode; dropNode: TreeNode; dropP
   Message.success('文档已移动')
 }
 
-const openDocument = (documentId: string) => {
+const openDocument = (documentId: number) => {
   navigateTo(`/document/${documentId}`)
 }
 
@@ -540,12 +484,12 @@ const shareDocument = (doc: Pick<Document, 'id' | 'title'>) => {
   Message.info(`分享文档: ${doc.title}`)
 }
 
-const deleteDocument = (documentId: string) => {
+const deleteDocument = (documentId: number) => {
   loading.value = true
-  setTimeout(() => {
+  setTimeout(async() => {
     loading.value = false
-    Message.success('文档已删除')
-    myDocuments.value = myDocuments.value.filter(doc => doc.id !== documentId)
+    await documentStore.deleteDocument(documentId)
+    // Message.success('文档已删除')
   }, 1000)
 }
 

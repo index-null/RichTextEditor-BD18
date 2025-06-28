@@ -1,8 +1,11 @@
+import { recentDocumentsAPI,getDocumentTreeAPI } from "~/apis/document"
+
 export interface Document {
-  id: string
+  id: number
   title: string
   content: string
   author: string
+  author_id:number
   createdAt: Date
   updatedAt: Date
   size?: string
@@ -10,7 +13,7 @@ export interface Document {
 }
 
 export interface Folder {
-  id: string
+  id: number
   title: string
   type: 'folder'
   children: (Document | Folder)[]
@@ -22,7 +25,13 @@ export interface User {
   color: string
   isOnline: boolean
 }
-
+export interface ApiResponse<T>{
+  statusCode:number
+  body: {
+    message:string
+    data?:T
+  }
+}
 export const useDocumentStore = defineStore('document', () => {
   // 状态
   const currentDocument = ref<Document | null>(null)
@@ -30,6 +39,8 @@ export const useDocumentStore = defineStore('document', () => {
   const recentDocuments = ref<Document[]>([])
   const onlineUsers = ref<User[]>([])
   const isLoading = ref(false)
+  // TODO
+  const userId=ref(1)
 
   // Getters
   const allDocuments = computed(() => {
@@ -46,59 +57,31 @@ export const useDocumentStore = defineStore('document', () => {
     extractDocs(documentTree.value)
     return docs
   })
-
+  const myDocuments = computed(() => {
+    const docs: Document[] = []
+    const extractMyDocs = (items: (Document | Folder)[]) => {
+      items.forEach(item => {
+        if (item.type === 'document' && item.author_id === userId.value) {
+          docs.push(item as Document)
+        } else if (item.type === 'folder') {
+          extractMyDocs((item as Folder).children)
+        }
+      })
+    }
+    extractMyDocs(documentTree.value)
+    return docs
+  })
   // Actions
   const loadDocumentTree = async () => {
     isLoading.value = true
     try {
-      // TODO: 从API加载文档树
-      // 模拟数据
-      documentTree.value = [
-        {
-          id: '1',
-          title: '工作文档',
-          type: 'folder',
-          children: [
-            {
-              id: '1-1',
-              title: '项目计划.md',
-              content: '# 项目计划\n这是项目计划文档...',
-              author: '张三',
-              createdAt: new Date('2024-01-10'),
-              updatedAt: new Date('2024-01-15'),
-              size: '2.3KB',
-              type: 'document'
-            },
-            {
-              id: '1-2',
-              title: '需求文档.md',
-              content: '# 需求文档\n这是需求文档...',
-              author: '李四',
-              createdAt: new Date('2024-01-12'),
-              updatedAt: new Date('2024-01-14'),
-              size: '1.8KB',
-              type: 'document'
-            }
-          ]
-        },
-        {
-          id: '2',
-          title: '个人笔记',
-          type: 'folder',
-          children: [
-            {
-              id: '2-1',
-              title: '学习笔记.md',
-              content: '# 学习笔记\n记录学习内容...',
-              author: '王五',
-              createdAt: new Date('2024-01-08'),
-              updatedAt: new Date('2024-01-13'),
-              size: '3.1KB',
-              type: 'document'
-            }
-          ]
-        }
-      ]
+      // 从API加载文档树
+      const documentTreeResp = await getDocumentTreeAPI(userId.value)
+      console.log("loadDocumentTree:",documentTreeResp)
+      if (documentTreeResp.status === 200) {
+        documentTree.value = documentTreeResp.data
+      }
+      
     } catch (error) {
       console.error('加载文档树失败:', error)
     } finally {
@@ -107,34 +90,15 @@ export const useDocumentStore = defineStore('document', () => {
   }
 
   const loadRecentDocuments = async () => {
-    try {
-      // TODO: 从API加载最近访问的文档
-      recentDocuments.value = [
-        {
-          id: '1',
-          title: '项目技术方案',
-          content: '# 技术方案\n项目技术方案内容...',
-          author: '张三',
-          createdAt: new Date('2024-01-10'),
-          updatedAt: new Date('2024-01-15'),
-          type: 'document'
-        },
-        {
-          id: '2',
-          title: '产品需求文档',
-          content: '# 产品需求\n产品需求内容...',
-          author: '李四',
-          createdAt: new Date('2024-01-12'),
-          updatedAt: new Date('2024-01-14'),
-          type: 'document'
-        }
-      ]
-    } catch (error) {
-      console.error('加载最近文档失败:', error)
+    const recentDocumentsResp = await recentDocumentsAPI(userId.value)
+    console.log("loadRecent:",recentDocumentsResp)
+    if (recentDocumentsResp.status === 200) {
+      recentDocuments.value = recentDocumentsResp.data
+      console.log("最近文档：",recentDocuments.value)
     }
   }
 
-  const loadDocument = async (documentId: string): Promise<Document | null> => {
+  const loadDocument = async (documentId: number): Promise<Document | null> => {
     isLoading.value = true
     try {
       // TODO: 从API加载具体文档
@@ -152,12 +116,13 @@ export const useDocumentStore = defineStore('document', () => {
     }
   }
 
-  const createDocument = async (title: string, folderId?: string): Promise<Document> => {
+  const createDocument = async (title: string, folderId?: number): Promise<Document> => {
     const newDocument: Document = {
-      id: `doc-${Date.now()}`,
+      id: Date.now(),
       title,
       content: '',
       author: '当前用户', // TODO: 从用户状态获取
+      author_id:userId.value,
       createdAt: new Date(),
       updatedAt: new Date(),
       type: 'document'
@@ -170,7 +135,7 @@ export const useDocumentStore = defineStore('document', () => {
       const addToFolder = (items: (Document | Folder)[]) => {
         items.forEach(item => {
           if (item.type === 'folder' && item.id === folderId) {
-            ;(item as Folder).children.push(newDocument)
+            ; (item as Folder).children.push(newDocument)
           } else if (item.type === 'folder') {
             addToFolder((item as Folder).children)
           }
@@ -185,7 +150,7 @@ export const useDocumentStore = defineStore('document', () => {
     return newDocument
   }
 
-  const updateDocument = async (documentId: string, updates: Partial<Document>) => {
+  const updateDocument = async (documentId: number, updates: Partial<Document>) => {
     try {
       // TODO: 调用API更新文档
       if (currentDocument.value && currentDocument.value.id === documentId) {
@@ -199,7 +164,7 @@ export const useDocumentStore = defineStore('document', () => {
     }
   }
 
-  const deleteDocument = async (documentId: string) => {
+  const deleteDocument = async (documentId: number) => {
     try {
       // TODO: 调用API删除文档
       const removeFromTree = (items: (Document | Folder)[]) => {
@@ -208,7 +173,7 @@ export const useDocumentStore = defineStore('document', () => {
             return false
           }
           if (item.type === 'folder') {
-            ;(item as Folder).children = removeFromTree((item as Folder).children)
+            ; (item as Folder).children = removeFromTree((item as Folder).children)
           }
           return true
         })
@@ -225,15 +190,15 @@ export const useDocumentStore = defineStore('document', () => {
 
   return {
     // State
-    currentDocument: readonly(currentDocument),
-    documentTree: readonly(documentTree),
-    recentDocuments: readonly(recentDocuments),
-    onlineUsers: readonly(onlineUsers),
-    isLoading: readonly(isLoading),
-    
+    currentDocument,
+    documentTree,
+    recentDocuments,
+    onlineUsers,
+    isLoading,
+
     // Getters
     allDocuments,
-    
+    myDocuments,
     // Actions
     loadDocumentTree,
     loadRecentDocuments,
@@ -243,4 +208,4 @@ export const useDocumentStore = defineStore('document', () => {
     deleteDocument,
     updateOnlineUsers
   }
-}) 
+})
