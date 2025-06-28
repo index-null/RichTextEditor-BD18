@@ -23,6 +23,7 @@
             <template #icon><Icon name="ri:file-copy-line" /></template>
             从模板创建
           </AButton>
+
         </div>
       </div>
       
@@ -307,6 +308,108 @@ interface Template {
   description: string
   icon: string
 }
+//测试token，需要更改为每次登陆时临时生成的Token。在Login_API函数中用data.body.token获得登录的Token，然后保存下来。
+const token_Input = null;
+
+// 后端API
+const profile = (token_Input) =>{
+
+const token = token_Input
+fetch('/api/auth/profile', {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+ 
+
+}).then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+ 
+console.log(data.message, data.user);
+console.log(data);
+
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+  
+
+}
+
+//举例说明登录数据输入,可删除
+ const loginData_Input = {};
+
+const login_API = (loginData_Input) =>{
+
+  const loginData = loginData_Input
+
+fetch('/api/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(loginData),
+}).then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+ 
+console.log(data.statusCode, data.body);
+// 这里可以用data.body.token获得登录的Token
+
+
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+
+}
+
+
+
+// 举例registerData_Input的输入形式,可删除
+const registerData_Input = {};
+
+const register_API = (registerData_Input) =>{
+
+const registerData = registerData_Input
+
+fetch('/api/auth/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(registerData)
+})
+.then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+  console.log('Registration successful:', data);
+  // 处理注册成功后的逻辑
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+
+}
+
+
+
 
 // 响应式数据
 const userName = ref('用户')
