@@ -1,3 +1,4 @@
+// server/api/document-tree.ts
 import { defineEventHandler, getQuery } from 'h3'
 import pool from '../utils/db'
 
@@ -13,30 +14,24 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // 查询用户所在组
+    // 查询用户组
     const userRes = await pool.query(
       `SELECT user_group FROM users WHERE id = $1`,
       [userId]
     )
-
     if (userRes.rows.length === 0) {
       return { status: 404, message: '用户不存在' }
     }
-
     const userGroup = userRes.rows[0].user_group
 
-    // 查询该组下的所有根文件夹
+    // 获取该用户组下所有文件夹
     const folderRes = await pool.query(
-      `
-      SELECT id, name FROM folders
-      WHERE user_group = $1 AND parent_folder_id IS NULL
-    `,
+      `SELECT id, name, parent_folder_id FROM folders WHERE user_group = $1`,
       [userGroup]
     )
-
     const folders = folderRes.rows
 
-    // 查询该组下所有文档及其作者信息
+    // 获取该用户组下所有文档
     const docRes = await pool.query(
       `
       SELECT d.id, d.title, d.content, d.folder_id, d.created_at, d.updated_at,
@@ -45,7 +40,7 @@ export default defineEventHandler(async (event) => {
       FROM documents d
       JOIN users u ON d.author_id = u.id
       WHERE d.user_group = $1
-    `,
+      `,
       [userGroup]
     )
 
@@ -54,7 +49,7 @@ export default defineEventHandler(async (event) => {
       title: row.title,
       content: row.content,
       author: row.author,
-      author_id: row.author_id, 
+      author_id: row.author_id,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       size: `${(row.content_length / 1024).toFixed(1)}KB`,
@@ -62,16 +57,49 @@ export default defineEventHandler(async (event) => {
       folder_id: row.folder_id
     }))
 
-    // 构建文档树
-    const documentTree = folders.map(folder => {
-      const children = documents.filter(doc => doc.folder_id === folder.id)
-      return {
-        id: folder.id.toString(),
+    const topLevelDocs = documents.filter(doc => doc.folder_id === null)
+
+    // === 构建嵌套树结构 ===
+
+    // 构建 folder map
+    const folderMap = new Map()
+    folders.forEach(folder => {
+      folderMap.set(folder.id, {
+        id: folder.id,
         title: folder.name,
         type: 'folder',
-        children
+        children: []
+      })
+    })
+
+    // 把文档挂到对应文件夹中
+    documents.forEach(doc => {
+      if (doc.folder_id && folderMap.has(doc.folder_id)) {
+        folderMap.get(doc.folder_id).children.push(doc)
       }
     })
+
+    // 构建嵌套文件夹结构
+    const topLevelFolders: any[] = []
+    folders.forEach(folder => {
+      const current = folderMap.get(folder.id)
+      if (folder.parent_folder_id && folderMap.has(folder.parent_folder_id)) {
+        folderMap.get(folder.parent_folder_id).children.push(current)
+      } else {
+        topLevelFolders.push(current)
+      }
+    })
+
+    // ✅ 排序每个文件夹的 children：文件夹在前，文档在后
+    for (const folder of folderMap.values()) {
+      folder.children.sort((a, b) => {
+        if (a.type === b.type) return 0
+        return a.type === 'folder' ? -1 : 1
+      })
+    }
+
+    // 合并成最终文档树
+    const documentTree = [...topLevelFolders, ...topLevelDocs]
 
     return {
       status: 200,

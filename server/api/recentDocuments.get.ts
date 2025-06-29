@@ -44,8 +44,7 @@ export default defineEventHandler(async (event) => {
       data: documents
     }
 
-  } catch (error) {
-    console.error('数据库查询错误', error)
+  } catch  {
     return {
       status: 500,
       message: '服务器内部错误'

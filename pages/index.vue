@@ -8,54 +8,48 @@
           <span class="gradient-text">{{ userName }}</span>
         </h1>
         <p class="welcome-subtitle">今天想要创建什么样的文档？</p>
-        
+
         <!-- 快速操作 -->
         <div class="quick-actions">
           <AButton type="primary" size="large" @click="createNewDocument">
-            <template #icon><Icon name="ri:add-line" /></template>
+            <template #icon>
+              <Icon name="ri:add-line" />
+            </template>
             新建文档
           </AButton>
           <AButton size="large" @click="showImportModal = true">
-            <template #icon><Icon name="ri:upload-2-line" /></template>
+            <template #icon>
+              <Icon name="ri:upload-2-line" />
+            </template>
             导入文档
           </AButton>
           <AButton size="large" @click="showTemplateModal = true">
-            <template #icon><Icon name="ri:file-copy-line" /></template>
+            <template #icon>
+              <Icon name="ri:file-copy-line" />
+            </template>
             从模板创建
           </AButton>
         </div>
       </div>
-      
+
       <!-- 统计卡片 -->
       <div class="stat-cards">
         <ACard class="stat-card" :bordered="false">
-          <AStatistic 
-            title="文档总数" 
-            :value="totalDocuments"
-            :value-style="{ color: 'rgb(var(--primary-6))' }"
-          >
+          <AStatistic title="文档总数" :value="totalDocuments" :value-style="{ color: 'rgb(var(--primary-6))' }">
             <template #prefix>
               <Icon name="ri:file-text-line" />
             </template>
           </AStatistic>
         </ACard>
         <ACard class="stat-card" :bordered="false">
-          <AStatistic 
-            title="今日编辑" 
-            :value="todayEdited"
-            :value-style="{ color: 'rgb(var(--success-6))' }"
-          >
+          <AStatistic title="今日编辑" :value="todayEdited" :value-style="{ color: 'rgb(var(--success-6))' }">
             <template #prefix>
               <Icon name="ri:edit-line" />
             </template>
           </AStatistic>
         </ACard>
         <ACard class="stat-card" :bordered="false">
-          <AStatistic 
-            title="协作人数" 
-            :value="collaborators"
-            :value-style="{ color: 'rgb(var(--warning-6))' }"
-          >
+          <AStatistic title="协作人数" :value="collaborators" :value-style="{ color: 'rgb(var(--warning-6))' }">
             <template #prefix>
               <Icon name="ri:team-line" />
             </template>
@@ -72,19 +66,16 @@
           <ACard title="文档目录" :bordered="false" class="folder-card">
             <template #extra>
               <AButton type="text" size="small" @click="createNewFolder">
-                <template #icon><Icon name="ri:add-line" /></template>
+                <template #icon>
+                  <Icon name="ri:add-line" />
+                </template>
               </AButton>
             </template>
-            
+
             <ASpin :loading="loading" tip="加载中...">
-              <ATree 
-                v-if="documentStore.documentTree.length > 0"
-                :data="documentStore.documentTree" 
-                :default-expand-all="true"
-                :draggable="true"
-                @select="handleTreeSelect"
-                @drop="handleTreeDrop"
-              >
+              <ATree v-if="documentStore.documentTree.length > 0" :data="documentStore.documentTree"
+                :default-expand-all="true" :draggable="true" :expanded-keys="expandedKeys" @expand="handleTreeExpand"
+                @select="handleTreeSelect" @drop="handleTreeDrop">
                 <template #title="nodeData">
                   <div class="tree-node">
                     <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
@@ -114,38 +105,43 @@
               <h2 class="section-title">最近文档</h2>
               <ALink @click="navigateTo('/documents')">查看全部</ALink>
             </div>
-            
+
             <div v-if="documentStore.recentDocuments.length > 0" class="document-grid">
-              <ACard 
-                v-for="doc in documentStore.recentDocuments" 
-                :key="doc.id"
-                class="document-card"
-                hoverable
-                @click="openDocument(doc.id)"
-              >
+              <ACard v-for="doc in documentStore.recentDocuments" :key="doc.id" class="document-card" hoverable
+                @click="openDocument(doc.id)">
                 <template #cover>
                   <div class="document-preview">
                     <Icon name="ri:file-text-line" :size="48" />
                   </div>
                 </template>
-                
+
                 <ACardMeta>
                   <template #title>
                     <div class="document-title">{{ doc.title }}</div>
                   </template>
                   <template #description>
                     <div class="document-meta">
-                      <span><Icon name="ri:time-line" /> {{ formatDate(doc.updatedAt) }}</span>
-                      <span><Icon name="ri:user-line" /> {{ doc.author }}</span>
+                      <span>
+                        <Icon name="ri:time-line" /> {{ formatDate(doc.updatedAt) }}
+                      </span>
+                      <span>
+                        <Icon name="ri:user-line" /> {{ doc.author }}
+                      </span>
                     </div>
                   </template>
                 </ACardMeta>
-                
+
                 <template #actions>
-                  <span><Icon name="ri:star-line" /></span>
-                  <span><Icon name="ri:share-line" /></span>
+                  <span>
+                    <Icon name="ri:star-line" />
+                  </span>
+                  <span>
+                    <Icon name="ri:share-line" />
+                  </span>
                   <ADropdown @select="(value) => handleDocAction(value, doc)">
-                    <span><Icon name="ri:more-line" /></span>
+                    <span>
+                      <Icon name="ri:more-line" />
+                    </span>
                     <template #content>
                       <ADoption value="rename">重命名</ADoption>
                       <ADoption value="duplicate">复制</ADoption>
@@ -163,12 +159,7 @@
             <div class="section-header">
               <h2 class="section-title">所有文档</h2>
               <ASpace>
-                <AInput 
-                  v-model="searchKeyword"
-                  placeholder="搜索文档"
-                  allow-clear
-                  @input="handleSearch"
-                >
+                <AInput v-model="searchKeyword" placeholder="搜索文档" allow-clear @input="handleSearch">
                   <template #prefix>
                     <Icon name="ri:search-line" />
                   </template>
@@ -180,18 +171,13 @@
                 </ASelect>
               </ASpace>
             </div>
-            
-            <ATable 
-              :data="filteredDocuments" 
-              :columns="documentColumns"
-              :pagination="{
-                pageSize: 10,
-                showTotal: true,
-                showJumper: true,
-                showPageSize: true
-              }"
-              :loading="loading"
-            >
+
+            <ATable :data="filteredDocuments" :columns="documentColumns" :pagination="{
+              pageSize: 10,
+              showTotal: true,
+              showJumper: true,
+              showPageSize: true
+            }" :loading="loading">
               <template #name="{ record }">
                 <div class="table-document-name" @click="openDocument(record.id)">
                   <Icon name="ri:file-text-line" />
@@ -207,17 +193,20 @@
               <template #actions="{ record }">
                 <ASpace>
                   <AButton type="text" size="mini" @click="openDocument(record.id)">
-                    <template #icon><Icon name="ri:edit-line" /></template>
+                    <template #icon>
+                      <Icon name="ri:edit-line" />
+                    </template>
                   </AButton>
                   <AButton type="text" size="mini" @click="shareDocument(record)">
-                    <template #icon><Icon name="ri:share-line" /></template>
+                    <template #icon>
+                      <Icon name="ri:share-line" />
+                    </template>
                   </AButton>
-                  <APopconfirm 
-                    content="确定要删除这个文档吗？" 
-                    @ok="deleteDocument(record.id)"
-                  >
+                  <APopconfirm content="确定要删除这个文档吗？" @ok="deleteDocument(record.id)">
                     <AButton type="text" size="mini" status="danger">
-                      <template #icon><Icon name="ri:delete-bin-line" /></template>
+                      <template #icon>
+                        <Icon name="ri:delete-bin-line" />
+                      </template>
                     </AButton>
                   </APopconfirm>
                 </ASpace>
@@ -229,17 +218,8 @@
     </div>
 
     <!-- 导入文档模态框 -->
-    <AModal 
-      v-model:visible="showImportModal" 
-      title="导入文档"
-      :width="480"
-      @ok="handleImport"
-    >
-      <AUpload
-        draggable
-        accept=".md,.txt,.docx"
-        :custom-request="customUpload"
-      >
+    <AModal v-model:visible="showImportModal" title="导入文档" :width="480" @ok="handleImport">
+      <AUpload draggable accept=".md,.txt,.docx" :custom-request="customUpload">
         <template #upload-button>
           <div class="upload-demo-draggable">
             <Icon name="ri:upload-cloud-line" :size="48" />
@@ -255,20 +235,10 @@
     </AModal>
 
     <!-- 模板选择模态框 -->
-    <AModal 
-      v-model:visible="showTemplateModal" 
-      title="选择模板"
-      :width="720"
-      :footer="false"
-    >
+    <AModal v-model:visible="showTemplateModal" title="选择模板" :width="720" :footer="false">
       <div class="template-grid">
-        <ACard 
-          v-for="template in templates" 
-          :key="template.id"
-          class="template-card"
-          hoverable
-          @click="createFromTemplate(template)"
-        >
+        <ACard v-for="template in templates" :key="template.id" class="template-card" hoverable
+          @click="createFromTemplate(template)">
           <div class="template-icon">
             <Icon :name="template.icon" :size="48" />
           </div>
@@ -282,7 +252,8 @@
 
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue'
-import { useDocumentStore } from '~/stores/document'
+import { useDocumentStore, type Folder } from '~/stores/document'
+import { useFolderStore } from '~/stores/folder'
 // 类型定义
 interface Document {
   id: number
@@ -292,6 +263,8 @@ interface Document {
   author: string
   size: string
   isNew?: boolean
+  type: "document"
+  folder_id: number | null
 }
 
 interface TreeNode {
@@ -316,22 +289,26 @@ const sortBy = ref('updatedAt')
 const showImportModal = ref(false)
 const showTemplateModal = ref(false)
 
-const documentStore=useDocumentStore()
+//选择的文件夹
+const selectFolderId = ref<number | null>(null)
+// 文档树展开状态
+const expandedKeys = ref<string[]>([])
+const handleTreeExpand = (keys: string[]) => {
+  expandedKeys.value = keys
+}
+const documentStore = useDocumentStore()
 onMounted(async () => {
   await documentStore.loadDocumentTree()
   await documentStore.loadRecentDocuments()
-  console.log(myDocuments.value)
 })
-const myDocuments = computed(()=>{
-  return documentStore.myDocuments
+const allDocuments = computed(() => {
+  return documentStore.allDocuments
 })
+const folderStore = useFolderStore()
 // 统计数据
 const totalDocuments = ref(23)
 const todayEdited = ref(5)
 const collaborators = ref(8)
-
-
-
 
 // 模板数据
 const templates: Template[] = [
@@ -363,34 +340,34 @@ const templates: Template[] = [
 
 // 表格列配置
 const documentColumns = [
-  { 
-    title: '文档名称', 
-    dataIndex: 'title', 
+  {
+    title: '文档名称',
+    dataIndex: 'title',
     slotName: 'name',
     ellipsis: true,
     tooltip: true,
     width: 300
   },
-  { 
-    title: '最后修改', 
-    dataIndex: 'updatedAt', 
+  {
+    title: '最后修改',
+    dataIndex: 'updatedAt',
     slotName: 'updatedAt',
     width: 150
   },
-  { 
-    title: '作者', 
+  {
+    title: '作者',
     dataIndex: 'author',
     ellipsis: true,
     width: 100
   },
-  { 
-    title: '大小', 
+  {
+    title: '大小',
     dataIndex: 'size',
     width: 80
   },
-  { 
-    title: '操作', 
-    slotName: 'actions', 
+  {
+    title: '操作',
+    slotName: 'actions',
     width: 120,
     align: 'center'
   }
@@ -398,16 +375,16 @@ const documentColumns = [
 
 // 计算属性
 const filteredDocuments = computed(() => {
-  let docs = [...myDocuments.value]
-  
+  let docs = [...allDocuments.value]
+
   // 搜索过滤
   if (searchKeyword.value) {
-    docs = docs.filter(doc => 
+    docs = docs.filter(doc =>
       doc.title.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
       doc.author.toLowerCase().includes(searchKeyword.value.toLowerCase())
     )
   }
-  
+
   // 排序
   docs.sort((a, b) => {
     if (sortBy.value === 'title') {
@@ -422,7 +399,7 @@ const filteredDocuments = computed(() => {
       return bTime - aTime
     }
   })
-  
+
   return docs
 })
 
@@ -452,7 +429,7 @@ const formatFullDate = (date: Date | string) => {
   const d = typeof date === 'string' ? new Date(date) : date
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
-    month: '2-digit', 
+    month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
@@ -460,21 +437,54 @@ const formatFullDate = (date: Date | string) => {
 }
 
 // 事件处理
-const createNewDocument = () => {
-  navigateTo('/document/new')
+const createNewDocument = async () => {
+  // 创建新文档
+  console.log(selectFolderId.value)
+  const data = await documentStore.createDocument("新建文档", selectFolderId.value)
+  navigateTo(`/document/${data.id}`)
 }
 
 const createNewFolder = () => {
   Message.info('创建文件夹功能开发中...')
 }
 
-const handleTreeSelect = (selectedKeys: string[]) => {
-  console.log('选中的节点:', selectedKeys)
+const handleTreeSelect = (_selectedKeys: string[], info: { selected: boolean; node: Document | Folder }) => {
+  const selectedNode = info.node
+  if (selectedNode?.type === 'folder') {
+    selectFolderId.value = selectedNode.id
+  }
+  console.log('选中的节点数据:', selectedNode)
 }
 
-const handleTreeDrop = (_params: { dragNode: TreeNode; dropNode: TreeNode; dropPosition: number }) => {
-  Message.success('文档已移动')
+const handleTreeDrop = ({ dragNode, dropNode }: { dragNode: Document | Folder; dropNode: Document | Folder }) => {
+  console.log('拖动节点:', dragNode)
+  console.log('目标节点:', dropNode)
+  const oldKeys = [...expandedKeys.value]
+
+  // 拖动的是文档还是文件夹？
+  if (dragNode.type === 'document') {
+    // 调用移动文档 API
+    const targetFolderId = dropNode.type === 'folder' ? dropNode.id : dropNode.folder_id
+    if (targetFolderId !== dragNode.folder_id) {
+      documentStore.moveDocument(dragNode.id, targetFolderId)
+    }
+  } else if (dragNode.type === 'folder') {
+    // 校验不能拖到自己或子文件夹
+    if (dropNode.type === "folder" && dragNode.id === dropNode.id || dropNode.type == "document" && dragNode.id === dropNode.folder_id) {
+      console.log("不能拖到自己或子文件夹")
+    } else {
+      folderStore.moveFolder(dragNode.id, dropNode.type === 'folder' ? dropNode.id : dropNode.folder_id)
+    }
+  }
+  // Message.success('已完成拖动操作')
+  // 恢复展开状态
+  console.log("拖动前", oldKeys)
+  // await documentStore.loadDocumentTree()
+  expandedKeys.value = oldKeys
+  console.log("拖动后", expandedKeys.value)
+  // handleTreeExpand(oldKeys)
 }
+
 
 const openDocument = (documentId: number) => {
   navigateTo(`/document/${documentId}`)
@@ -486,10 +496,9 @@ const shareDocument = (doc: Pick<Document, 'id' | 'title'>) => {
 
 const deleteDocument = (documentId: number) => {
   loading.value = true
-  setTimeout(async() => {
+  setTimeout(async () => {
     loading.value = false
     await documentStore.deleteDocument(documentId)
-    // Message.success('文档已删除')
   }, 1000)
 }
 
@@ -794,13 +803,13 @@ const createFromTemplate = (template: Template) => {
   .welcome-title {
     font-size: 24px;
   }
-  
+
   .stat-cards {
     grid-template-columns: 1fr;
   }
-  
+
   .document-grid {
     grid-template-columns: 1fr;
   }
 }
-</style> 
+</style>
