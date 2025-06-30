@@ -1,113 +1,79 @@
 <template>
   <div class="app-layout">
-    <ALayout>
-      <!-- 顶部导航栏 -->
-      <ALayoutHeader v-if="showHeader" class="header">
-        <div class="header-content">
-          <div class="logo">
-            <h2>协同文档编辑器</h2>
-          </div>
-          <div class="header-actions">
-            <!-- 用户相关操作 -->
-            <template v-if="isAuthenticated">
-              <a-dropdown @select="handleDropdownSelect" trigger="hover">
-                <a-avatar :src="user?.avatar" style="cursor: pointer">
-                  {{ user?.username?.[0] || "U" }}
-                </a-avatar>
-                <template #content>
-                  <a-doption key="user-info">
-                    {{ getUserGroupLabel(user?.group) }}
-                  </a-doption>
-                  <a-doption key="logout" @click="handleLogout()"
-                    >退出登录</a-doption
-                  >
-                </template>
-              </a-dropdown>
-            </template>
-            <template v-else>
-              <AButton type="primary" @click="toLogin()">登录</AButton>
-            </template>
-          </div>
-        </div>
-      </ALayoutHeader>
-
-      <!-- 主要内容区域 -->
-      <ALayoutContent class="main-content">
-        <slot />
-      </ALayoutContent>
-    </ALayout>
+    <AppHeader />
+    <main class="app-main">
+      <slot />
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router";
-import { storeToRefs } from "pinia";
-import { useAuthStore } from "@/stores/auth";
-const route = useRoute();
+// 使用主题
+useTheme();
 
-const showHeader = computed(() => {
-  // 默认显示header，只有meta里明确hideHeader为true才隐藏
-  return route.meta.hideHeader !== true;
-});
 // 页面标题
 useHead({
   title: "协同文档编辑器",
 });
-const router = useRouter();
-const authStore = useAuthStore();
-const { isAuthenticated, user } = storeToRefs(authStore);
-
-// 根据用户组别返回对应的标签
-const getUserGroupLabel = (group?: string) => {
-  switch (group) {
-    case "user":
-      return "普通用户";
-    case "test":
-      return "测试用户";
-  }
-};
-
-function toLogin() {
-  router.push("/auth/login");
-}
-function handleLogout() {
-  authStore.logout();
-  router.push("/auth/login");
-}
-function handleDropdownSelect(key: string) {
-  if (key === "logout") handleLogout();
-}
 </script>
+
+<style>
+/* 全局样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#__nuxt {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  background-color: var(--color-bg-1);
+  color: var(--color-text-1);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Arco Design 暗黑模式样式 */
+body[arco-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-fill-2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-fill-3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fill-4);
+}
+</style>
 
 <style scoped>
 .app-layout {
   min-height: 100vh;
-}
-
-.header {
-  background: #fff;
-  border-bottom: 1px solid #e5e6eb;
-  padding: 0;
-}
-
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 64px;
+  flex-direction: column;
 }
 
-.logo h2 {
-  margin: 0;
-  color: #1d2129;
-}
-
-.main-content {
-  padding: 20px;
-  background: #f7f8fa;
-  min-height: calc(100vh - 64px);
+.app-main {
+  flex: 1;
+  overflow: auto;
 }
 </style>

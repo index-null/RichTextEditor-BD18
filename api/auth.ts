@@ -1,124 +1,97 @@
-import type { LoginForm, RegisterForm, AuthResponse, User } from "@/types/auth";
-
-// 模拟 API 延迟
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// 模拟用户数据
-const mockUsers: User[] = [
-  {
-    id: "1",
-    username: "admin",
-    email: "admin@example.com",
-    group: "user",
-    avatar: "https://avatars.githubusercontent.com/u/1?v=4",
-    createdAt: "2025-06-01T00:00:00Z",
-  },
-  {
-    id: "2",
-    username: "tester",
-    email: "tester@example.com",
-    group: "test",
-    avatar: "https://avatars.githubusercontent.com/u/2?v=4",
-    createdAt: "2025-06-01T00:00:00Z",
-  },
-];
-
-// 模拟已注册用户（包含密码）
-const mockUserCredentials = [
-  { username: "admin", password: "123456", userId: "1" },
-  { username: "tester", password: "123456", userId: "2" },
-];
+import type {
+  LoginForm,
+  RegisterForm,
+  AuthResponse,
+  User,
+  LoginResponse,
+  RegisterResponse,
+} from "@/types/auth";
 
 // 登录 API
 export const loginApi = async (form: LoginForm): Promise<AuthResponse> => {
-  await delay(1000); // 模拟网络延迟
+  try {
+    const response = await $fetch<LoginResponse>("/api/auth/login", {
+      method: "POST",
+      body: form,
+    });
 
-  const credential = mockUserCredentials.find(
-    (c) => c.username === form.username && c.password === form.password
-  );
-
-  if (credential) {
-    const user = mockUsers.find((u) => u.id === credential.userId);
-    if (user) {
+    if (response.statusCode === 200 && response.body) {
       return {
         success: true,
-        message: "登录成功",
+        message: response.body.message,
         data: {
-          user,
-          token: `mock-token-${user.id}-${Date.now()}`,
+          user: response.body.user!,
+          token: response.body.token!,
         },
       };
+    } else {
+      return {
+        success: false,
+        message: response.body?.error || "登录失败",
+      };
     }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.data?.body?.error || "登录失败，请重试",
+    };
   }
-
-  return {
-    success: false,
-    message: "用户名或密码错误",
-  };
 };
 
 // 注册 API
 export const registerApi = async (
   form: RegisterForm
 ): Promise<AuthResponse> => {
-  await delay(1000);
+  try {
+    const response = await $fetch<RegisterResponse>("/api/auth/register", {
+      method: "POST",
+      body: form,
+    });
 
-  // 检查用户名是否已存在
-  const existingUser = mockUserCredentials.find(
-    (c) => c.username === form.username
-  );
-  if (existingUser) {
+    if (response.statusCode === 201) {
+      return {
+        success: true,
+        message: "注册成功，请登录",
+      };
+    } else {
+      return {
+        success: false,
+        message: response.statusMessage || "注册失败",
+      };
+    }
+  } catch (error: any) {
     return {
       success: false,
-      message: "用户名已存在",
+      message: error.data?.statusMessage || "注册失败，请重试",
     };
   }
-
-  // 检查邮箱是否已存在
-  const existingEmail = mockUsers.find((u) => u.email === form.email);
-  if (existingEmail) {
-    return {
-      success: false,
-      message: "邮箱已被注册",
-    };
-  }
-
-  // 创建新用户
-  const newUser: User = {
-    id: String(mockUsers.length + 1),
-    username: form.username,
-    email: form.email,
-    group: form.group,
-    createdAt: new Date().toISOString(),
-  };
-
-  mockUsers.push(newUser);
-  mockUserCredentials.push({
-    username: form.username,
-    password: form.password,
-    userId: newUser.id,
-  });
-
-  return {
-    success: true,
-    message: "注册成功",
-  };
 };
 
 // 获取用户信息 API
 export const getUserInfoApi = async (): Promise<AuthResponse> => {
-  await delay(500);
+  try {
+    const token = process.client ? localStorage.getItem("token") : "";
+    const response = await $fetch<{ message: string; user: User }>(
+      "/api/auth/profile",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-  // 这里应该根据 token 获取用户信息
-  // 为了简化，我们返回第一个用户
-  const user = mockUsers[0];
-
-  return {
-    success: true,
-    message: "获取用户信息成功",
-    data: {
-      user,
-      token: localStorage.getItem("token") || "",
-    },
-  };
+    return {
+      success: true,
+      message: response.message,
+      data: {
+        user: response.user,
+        token: localStorage.getItem("token") || "",
+      },
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: "获取用户信息失败",
+    };
+  }
 };

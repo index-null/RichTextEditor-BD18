@@ -1,32 +1,49 @@
 export interface User {
   id: string;
   username: string;
-  email: string;
-  group: string;
-  avatar?: string;
-  createdAt: string;
+  nickname: string;
+  user_group: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface LoginForm {
   username: string;
   password: string;
-  remember?: boolean;
 }
 
 export interface RegisterForm {
   username: string;
-  email: string;
   password: string;
-  confirmPassword: string;
-  group: string;
-  agreement: boolean;
+  nickname: string;
+  userGroup: string;
 }
 
 export interface AuthResponse {
-  success: boolean;
-  message: string;
+  success?: boolean;
+  message?: string;
+  error?: string;
   data?: {
     user: User;
     token: string;
   };
+  user?: User;
+  token?: string;
+  statusCode?: number;
+}
+
+export interface LoginResponse {
+  statusCode: number;
+  body: {
+    message?: string;
+    error?: string;
+    user?: User;
+    token?: string;
+  };
+}
+
+export interface RegisterResponse {
+  statusCode: number;
+  data?: User;
+  statusMessage?: string;
 }

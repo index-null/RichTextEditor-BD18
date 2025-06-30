@@ -26,22 +26,22 @@
           </a-input>
         </a-form-item>
 
-        <a-form-item field="email" label="邮箱">
+        <a-form-item field="nickname" label="昵称">
           <a-input
-            v-model="form.email"
-            placeholder="请输入邮箱地址"
+            v-model="form.nickname"
+            placeholder="请输入昵称"
             size="large"
             allow-clear
           >
             <template #prefix>
-              <icon-email />
+              <icon-user />
             </template>
           </a-input>
         </a-form-item>
 
-        <a-form-item field="group" label="用户组">
+        <a-form-item field="userGroup" label="用户组">
           <a-select
-            v-model="form.group"
+            v-model="form.userGroup"
             placeholder="请选择用户组"
             size="large"
             allow-clear
@@ -74,32 +74,6 @@
               <span class="strength-text">{{ passwordStrengthText }}</span>
             </div>
           </template>
-        </a-form-item>
-
-        <a-form-item field="confirmPassword" label="确认密码">
-          <a-input-password
-            v-model="form.confirmPassword"
-            placeholder="请再次输入密码"
-            size="large"
-            allow-clear
-          >
-            <template #prefix>
-              <icon-lock />
-            </template>
-          </a-input-password>
-        </a-form-item>
-
-        <a-form-item field="agreement">
-          <a-checkbox v-model="form.agreement">
-            我已阅读并同意
-            <a-link href="#" @click.prevent="showTerms = true">
-              《用户协议》
-            </a-link>
-            和
-            <a-link href="#" @click.prevent="showPrivacy = true">
-              《隐私政策》
-            </a-link>
-          </a-checkbox>
         </a-form-item>
 
         <a-form-item>
@@ -166,24 +140,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from "vue";
+import { ref, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
 import { Message } from "@arco-design/web-vue";
-import { IconUser, IconEmail, IconLock } from "@arco-design/web-vue/es/icon";
 import AuthLayout from "@/components/AuthLayout.vue";
 import { useAuthStore } from "@/stores/auth";
-import {
-  usernameRules,
-  emailRules,
-  passwordRules,
-  createConfirmPasswordRules,
-  agreementRules,
-  groupRules,
-} from "@/utils/validator";
+import { usernameRules, passwordRules } from "@/utils/validator";
 import type { RegisterForm } from "@/types/auth";
+
 definePageMeta({
   hideHeader: true,
 });
+
 const router = useRouter();
 const authStore = useAuthStore();
 const formRef = ref();
@@ -193,11 +161,9 @@ const showPrivacy = ref(false);
 // 表单数据
 const form = reactive<RegisterForm>({
   username: "",
-  email: "",
+  nickname: "",
   password: "",
-  confirmPassword: "",
-  group: "user",
-  agreement: false,
+  userGroup: "user",
 });
 
 // 密码强度计算
@@ -234,24 +200,30 @@ const passwordStrengthText = computed(() => {
 });
 
 // 验证规则
-const rules = computed(() => ({
+const rules = {
   username: usernameRules,
-  email: emailRules,
+  nickname: [
+    {
+      required: true,
+      message: "请输入昵称",
+    },
+    {
+      minLength: 2,
+      message: "昵称至少2个字符",
+    },
+    {
+      maxLength: 20,
+      message: "昵称最多20个字符",
+    },
+  ],
   password: passwordRules,
-  confirmPassword: createConfirmPasswordRules(form.password),
-  agreement: agreementRules,
-  group: groupRules,
-}));
-
-// 监听密码变化，重新验证确认密码
-watch(
-  () => form.password,
-  () => {
-    if (form.confirmPassword) {
-      formRef.value?.validateField("confirmPassword");
-    }
-  }
-);
+  userGroup: [
+    {
+      required: true,
+      message: "请选择用户组",
+    },
+  ],
+};
 
 // 提交表单
 const handleSubmit = async (data: { values: RegisterForm; errors: any }) => {
@@ -260,10 +232,10 @@ const handleSubmit = async (data: { values: RegisterForm; errors: any }) => {
   const result = await authStore.register(data.values);
 
   if (result.success) {
-    Message.success(result.message);
-    router.push("/login");
+    Message.success(result.message || "注册成功");
+    router.push("/auth/login");
   } else {
-    Message.error(result.message);
+    Message.error(result.message || "注册失败");
   }
 };
 </script>

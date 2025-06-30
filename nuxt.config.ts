@@ -8,7 +8,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   ssr: true,
-  // CSS配置
+
+  // CSS配置 - 移除全局暗色CSS
   css: ["@arco-design/web-vue/dist/arco.css"],
 
   // 模块配置
@@ -18,7 +19,20 @@ export default defineNuxtConfig({
     "@nuxt/eslint",
     "@nuxt/icon",
     "@nuxt/devtools",
+    "@nuxtjs/color-mode",
   ],
+
+  // Color Mode 配置
+  colorMode: {
+    preference: "light", // 默认亮色模式
+    fallback: "light", // 备用模式
+    hid: "nuxt-color-mode-script",
+    globalName: "__NUXT_COLOR_MODE__",
+    componentName: "ColorScheme",
+    classPrefix: "",
+    classSuffix: "",
+    storageKey: "nuxt-color-mode",
+  },
 
   // TypeScript配置
   typescript: {

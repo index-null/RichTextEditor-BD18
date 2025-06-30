@@ -40,13 +40,6 @@
         </a-form-item>
 
         <a-form-item>
-          <div class="form-options">
-            <a-checkbox v-model="form.remember"> 记住我 </a-checkbox>
-            <a-link href="#" class="forgot-password"> 忘记密码？ </a-link>
-          </div>
-        </a-form-item>
-
-        <a-form-item>
           <a-button
             type="primary"
             html-type="submit"
@@ -77,9 +70,11 @@ import AuthLayout from "@/components/AuthLayout.vue";
 import { useAuthStore } from "@/stores/auth";
 import { usernameRules, passwordRules } from "@/utils/validator";
 import type { LoginForm } from "@/types/auth";
+
 definePageMeta({
   hideHeader: true,
 });
+
 const router = useRouter();
 const authStore = useAuthStore();
 const formRef = ref();
@@ -88,18 +83,12 @@ const formRef = ref();
 const form = reactive<LoginForm>({
   username: "",
   password: "",
-  remember: false,
 });
 
 // 验证规则
 const rules = {
   username: usernameRules,
-  password: [
-    {
-      required: true,
-      message: "请输入密码",
-    },
-  ],
+  password: passwordRules,
 };
 
 // 提交表单
@@ -109,10 +98,10 @@ const handleSubmit = async (data: { values: LoginForm; errors: any }) => {
   const result = await authStore.login(data.values);
 
   if (result.success) {
-    Message.success(result.message);
+    Message.success(result.message || "登录成功");
     router.push("/");
   } else {
-    Message.error(result.message);
+    Message.error(result.message || "登录失败");
   }
 };
 </script>
