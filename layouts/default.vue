@@ -9,12 +9,12 @@
 
 <script setup lang="ts">
 // 使用主题
-useTheme()
+useTheme();
 
 // 页面标题
 useHead({
-  title: '协同文档编辑器'
-})
+  title: "协同文档编辑器",
+});
 </script>
 
 <style>
@@ -32,16 +32,16 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-    'Noto Color Emoji';
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   background-color: var(--color-bg-1);
   color: var(--color-text-1);
   transition: background-color 0.3s, color 0.3s;
 }
 
 /* Arco Design 暗黑模式样式 */
-body[arco-theme='dark'] {
+body[arco-theme="dark"] {
   color-scheme: dark;
 }
 
@@ -76,4 +76,4 @@ body[arco-theme='dark'] {
   flex: 1;
   overflow: auto;
 }
-</style> 
+</style>
