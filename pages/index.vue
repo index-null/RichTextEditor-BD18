@@ -35,7 +35,8 @@
       <!-- 统计卡片 -->
       <div class="stat-cards">
         <ACard class="stat-card" :bordered="false">
-          <AStatistic title="文档总数" :value="totalDocuments" :value-style="{ color: 'rgb(var(--primary-6))' }">
+          <AStatistic title="文档总数" :value="documentStore.allDocuments.length"
+            :value-style="{ color: 'rgb(var(--primary-6))' }">
             <template #prefix>
               <Icon name="ri:file-text-line" />
             </template>
@@ -65,14 +66,10 @@
         <ACol :xs="24" :sm="24" :md="8" :lg="6">
           <ACard title="文档目录" :bordered="false" class="folder-card">
             <!-- 根目录拖动区域 -->
-<div
-  class="root-drop-zone"
-  @dragover.prevent
-  @drop="handleDropToRoot"
->
-  <Icon name="ri:upload-cloud-line" style="margin-right: 6px;" />
-  拖拽到这里可移动到根目录
-</div>
+            <div class="root-drop-zone" @dragover.prevent @drop="handleDropToRoot">
+              <Icon name="ri:upload-cloud-line" style="margin-right: 6px;" />
+              拖拽到这里可移动到根目录
+            </div>
 
             <template #extra>
               <AButton type="text" size="small" @click="createNewFolder">
@@ -81,12 +78,13 @@
                 </template>
               </AButton>
             </template>
-            
+
             <ASpin :loading="loading" tip="加载中...">
               <ATree v-if="documentStore.documentTree.length > 0" :data="documentStore.documentTree" :draggable="true"
                 :expanded-keys="expandedKeys" @update:expanded-keys="(keys) => expandedKeys = keys"
-                @select="handleTreeSelect" @expand="handleTreeExpand" @drop="handleTreeDrop" @drag-start="handleDragStart">
-                <template #title="nodeData">
+                @select="handleTreeSelect" @expand="handleTreeExpand" @drop="handleTreeDrop"
+                @drag-start="handleDragStart">
+                <!-- <template #title="nodeData">
                   <div class="tree-node">
                     <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
                     <span class="node-title">{{ nodeData.title }}</span>
@@ -100,7 +98,40 @@
                       </ADropdown>
                     </div>
                   </div>
-                </template>
+                </template> -->
+                <template #title="nodeData">
+  <div class="tree-node">
+    <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
+
+    <template v-if="nodeData.key === 'temp_folder'">
+      <input
+        ref="folderInputRef"
+        class="temp-folder-input"
+        v-model="newFolderTitle"
+        @blur="handleCreateConfirm"
+        @keyup.enter="handleCreateConfirm"
+        @keyup.esc="cancelNewFolder"
+        placeholder="请输入文件夹名称"
+        autofocus
+      />
+    </template>
+    
+    <template v-else>
+      <span class="node-title">{{ nodeData.title }}</span>
+    </template>
+
+    <div class="node-actions" v-if="nodeData.key !== 'temp_folder'">
+      <ADropdown trigger="click" @select="(value) => handleNodeAction(value, nodeData)">
+        <Icon name="ri:more-line" class="action-icon" />
+        <template #content>
+          <ADoption value="rename">重命名</ADoption>
+          <ADoption value="delete">删除</ADoption>
+        </template>
+      </ADropdown>
+    </div>
+  </div>
+</template>
+
               </ATree>
               <AEmpty v-else description="暂无文档" />
             </ASpin>
@@ -302,6 +333,10 @@ const showTemplateModal = ref(false)
 
 //选择的文件夹
 const selectFolderId = ref<number | null>(null)
+// 新建文件夹
+const newFolderNode = ref<{ parentId: number | null } | null>(null)
+const newFolderTitle = ref('')
+const folderInputRef = ref<HTMLInputElement | null>(null)
 
 const documentStore = useDocumentStore()
 onMounted(async () => {
@@ -334,8 +369,17 @@ const allDocuments = computed(() => {
 })
 const folderStore = useFolderStore()
 // 统计数据
-const totalDocuments = ref(23)
-const todayEdited = ref(5)
+// const totalDocuments = ref(0)
+const todayEdited = computed(() => {
+  const today = new Date()
+  const todayDate = today.toISOString().split('T')[0] // yyyy-mm-dd
+
+  return documentStore.allDocuments.filter(doc => {
+    const updatedAt = new Date(doc.updatedAt).toISOString().split('T')[0]
+    return updatedAt === todayDate
+  }).length
+})
+
 const collaborators = ref(8)
 
 // 模板数据
@@ -473,7 +517,99 @@ const createNewDocument = async () => {
 }
 
 const createNewFolder = () => {
-  Message.info('创建文件夹功能开发中...')
+  const parentId = selectFolderId.value ?? null
+  newFolderNode.value = { parentId }
+
+  // ✅ 展开当前文件夹（在添加节点之前执行）
+  if (parentId !== null && !expandedKeys.value.includes(String(parentId))) {
+    expandedKeys.value.push(String(parentId))
+  }
+
+  // ✅ 插入临时节点
+  if (parentId === null) {
+    documentStore.documentTree.unshift({
+      id: -1,
+      key: 'temp_folder',
+      title: '',
+      type: 'folder',
+      children: []
+    })
+  } else {
+    const parent = findNodeById(documentStore.documentTree, parentId)
+    if (parent) {
+      parent.children = parent.children || []
+      parent.children.unshift({
+        id: -1,
+        key: 'temp_folder',
+        title: '',
+        type: 'folder',
+        children: []
+      })
+    }
+  }
+
+  // ✅ 等下一帧后聚焦输入框
+  nextTick(() => {
+    folderInputRef.value?.focus()
+  })
+}
+
+const findNodeById = (nodes: DocumentTree[], id: number): DocumentTree | null => {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    if (node.children?.length) {
+      const result = findNodeById(node.children, id)
+      if (result) return result
+    }
+  }
+  return null
+}
+
+
+const cancelNewFolder = () => {
+  removeTempFolderNode()
+  newFolderNode.value = null
+  newFolderTitle.value = ''
+}
+const creating = ref(false)
+
+const handleCreateConfirm = async () => {
+  if (creating.value) return
+  creating.value = true
+
+  const title = newFolderTitle.value.trim()
+  const parentId = newFolderNode.value?.parentId ?? null
+
+  removeTempFolderNode()
+  newFolderNode.value = null
+  newFolderTitle.value = ''
+
+  if (!title) {
+    creating.value = false
+    return
+  }
+
+  try {
+    await folderStore.createFolder(title, parentId)
+    await documentStore.loadDocumentTree()
+    Message.success('文件夹创建成功')
+  } catch (err) {
+    console.error(err)
+    Message.error('创建失败')
+  } finally {
+    creating.value = false
+  }
+}
+
+const removeTempFolderNode = () => {
+  const recursiveRemove = (nodes: DocumentTree[]) => {
+    return nodes.filter((node) => {
+      if (node.key === 'temp_folder') return false
+      if (node.children) node.children = recursiveRemove(node.children)
+      return true
+    })
+  }
+  documentStore.documentTree = recursiveRemove(documentStore.documentTree)
 }
 
 const handleTreeSelect = (_selectedKeys: string[], info: { selected: boolean; node: Document | Folder }) => {
@@ -564,7 +700,6 @@ const handleDragStart = (e: DragEvent, node: TreeNode) => {
   e.dataTransfer?.setData('application/json', JSON.stringify(node))
 }
 
-
 const openDocument = (documentId: number) => {
   navigateTo(`/document/${documentId}`)
 }
@@ -580,12 +715,31 @@ const deleteDocument = (documentId: number) => {
     await documentStore.deleteDocument(documentId)
   }, 1000)
 }
-
+const deleteFolder = (folderId: number) => {
+  loading.value = true
+  setTimeout(async () => {
+    loading.value = false
+    await folderStore.deleteFolder(folderId)
+  }, 1000)
+}
 const handleNodeAction = (action: string, node: TreeNode) => {
   if (action === 'rename') {
-    Message.info(`重命名: ${node.title}`)
+    if(node.type==="document"){
+      Message.info(`重命名文档: ${node.title}`)
+    }else{
+      Message.info(`重命名文件夹: ${node.title}`)
+    }
+    
   } else if (action === 'delete') {
-    Message.warning(`删除: ${node.title}`)
+    if(node.type==="document"){
+    deleteDocument(node.id)
+    Message.warning(`删除文件: ${node.title}`)
+
+    }else{
+      deleteFolder(node.id)
+      Message.warning(`删除文件夹: ${node.title}`)
+
+    }
   }
 }
 
@@ -646,6 +800,23 @@ const createFromTemplate = (template: Template) => {
   cursor: pointer;
   font-size: 13px;
 }
+.temp-folder-input {
+  height: 32px;
+  padding: 4px 8px;
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  width: 180px;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-left: 8px;
+}
+
+.temp-folder-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary-6-rgb), 0.2);
+}
+
 .root-drop-zone:hover {
   background-color: #e8f4ff;
 }

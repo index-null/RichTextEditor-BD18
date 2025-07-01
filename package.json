@@ -50,6 +50,7 @@
     "@nuxt/devtools": "^2.5.0",
     "@nuxt/eslint": "^1.4.1",
     "@nuxt/icon": "^1.13.0",
+    "@types/pg": "^8.15.4",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",
     "typescript": "^5.8.3",

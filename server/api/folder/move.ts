@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
       SELECT id FROM ancestors WHERE id = $2
     `
     const cycleCheckResult = await pool.query(checkCycleSQL, [targetId, folderId])
-    if (cycleCheckResult.rowCount > 0) {
+    if (cycleCheckResult.rowCount&&cycleCheckResult.rowCount > 0) {
       throw createError({ status: 400, message: '不能将文件夹移动到其自身或子文件夹中' })
     }
   }

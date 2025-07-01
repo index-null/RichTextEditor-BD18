@@ -59,7 +59,7 @@ export const useDocumentStore = defineStore('document', () => {
 
   // Getters
   const allDocuments = computed(() => {
-    const docs: DocumentTree[] = []
+    const docs: Document[] = []
     const extractDocs = (items: DocumentTree[]) => {
       items.forEach(item => {
         if (item.type === 'document') {

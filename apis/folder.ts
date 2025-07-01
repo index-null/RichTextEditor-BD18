@@ -2,30 +2,30 @@ import request from '@/composables/http'
 
 // 创建文件夹
 export const createFolderAPI = (data: {
-  userId: string,
-  title: string,
+  name: string,
+  author_id: number,
+  parent_folder_id: number | null,
 }) => {
   return request({
-    url: '/folders',
+    url: '/folder/create',
     method: 'POST',
     data
   })
 }
 // 重命名文件夹
-export const renameFolderAPI = (data: {
-  folderId: string,
-  title: string,
+export const renameFolderAPI = (folderId: number,data: {
+  name: string,
 }) => {
   return request({
-    url: `/folders/${data.folderId}`,
+    url: `/folder/${folderId}`,
     method: 'PUT',
     data
   })
 }
 // 删除文件夹
-export const deleteFolderAPI = (folderId: string) => {
+export const deleteFolderAPI = (folderId: number) => {
   return request({
-    url: `/folders/${folderId}`,
+    url: `/folder/${folderId}`,
     method: 'DELETE'
   })
 }
