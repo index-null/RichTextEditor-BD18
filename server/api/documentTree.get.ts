@@ -47,6 +47,7 @@ export default defineEventHandler(async (event) => {
     const documents = docRes.rows.map(row => ({
       id: row.id,
       title: row.title,
+      key:`doc_${row.id}`,
       content: row.content,
       author: row.author,
       author_id: row.author_id,
@@ -61,13 +62,15 @@ export default defineEventHandler(async (event) => {
 
     // === 构建嵌套树结构 ===
 
-    // 构建 folder map
+    // 构建 folder map，并加入 parent_folder_id 字段
     const folderMap = new Map()
     folders.forEach(folder => {
       folderMap.set(folder.id, {
         id: folder.id,
+        key:`folder_${folder.id}`,
         title: folder.name,
         type: 'folder',
+        parent_folder_id: folder.parent_folder_id ?? null,
         children: []
       })
     })

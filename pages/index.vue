@@ -64,6 +64,16 @@
         <!-- 左侧文档树 -->
         <ACol :xs="24" :sm="24" :md="8" :lg="6">
           <ACard title="文档目录" :bordered="false" class="folder-card">
+            <!-- 根目录拖动区域 -->
+<div
+  class="root-drop-zone"
+  @dragover.prevent
+  @drop="handleDropToRoot"
+>
+  <Icon name="ri:upload-cloud-line" style="margin-right: 6px;" />
+  拖拽到这里可移动到根目录
+</div>
+
             <template #extra>
               <AButton type="text" size="small" @click="createNewFolder">
                 <template #icon>
@@ -71,11 +81,11 @@
                 </template>
               </AButton>
             </template>
-
+            
             <ASpin :loading="loading" tip="加载中...">
-              <ATree v-if="documentStore.documentTree.length > 0" :data="documentStore.documentTree"
-                :default-expand-all="true" :draggable="true" :expanded-keys="expandedKeys" @expand="handleTreeExpand"
-                @select="handleTreeSelect" @drop="handleTreeDrop">
+              <ATree v-if="documentStore.documentTree.length > 0" :data="documentStore.documentTree" :draggable="true"
+                :expanded-keys="expandedKeys" @update:expanded-keys="(keys) => expandedKeys = keys"
+                @select="handleTreeSelect" @expand="handleTreeExpand" @drop="handleTreeDrop" @drag-start="handleDragStart">
                 <template #title="nodeData">
                   <div class="tree-node">
                     <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
@@ -268,6 +278,7 @@ interface Document {
 }
 
 interface TreeNode {
+  id: number
   key: string
   title: string
   type: 'folder' | 'document'
@@ -291,16 +302,33 @@ const showTemplateModal = ref(false)
 
 //选择的文件夹
 const selectFolderId = ref<number | null>(null)
-// 文档树展开状态
-const expandedKeys = ref<string[]>([])
-const handleTreeExpand = (keys: string[]) => {
-  expandedKeys.value = keys
-}
+
 const documentStore = useDocumentStore()
 onMounted(async () => {
   await documentStore.loadDocumentTree()
   await documentStore.loadRecentDocuments()
+  const allFolderKeys = getAllFolderIds(documentStore.documentTree)
+  expandedKeys.value = allFolderKeys
+
 })
+const getAllFolderIds = (nodes: DocumentTree[]): string[] => {
+  const result: string[] = []
+
+  const dfs = (nodeList: DocumentTree[]) => {
+    for (const node of nodeList) {
+      if (node.type === 'folder') {
+        result.push(String(node.id))
+        if (node.children?.length) {
+          dfs(node.children)
+        }
+      }
+    }
+  }
+
+  dfs(nodes)
+  return result
+}
+
 const allDocuments = computed(() => {
   return documentStore.allDocuments
 })
@@ -381,7 +409,7 @@ const filteredDocuments = computed(() => {
   if (searchKeyword.value) {
     docs = docs.filter(doc =>
       doc.title.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
-      doc.author.toLowerCase().includes(searchKeyword.value.toLowerCase())
+      (doc.author && doc.author.toLowerCase().includes(searchKeyword.value.toLowerCase()))
     )
   }
 
@@ -394,8 +422,8 @@ const filteredDocuments = computed(() => {
       const aValue = sortBy.value === 'updatedAt' ? a.updatedAt : a.createdAt
       const bValue = sortBy.value === 'updatedAt' ? b.updatedAt : b.createdAt
       // 确保日期值存在且转换为时间戳
-      const aTime = aValue instanceof Date ? aValue.getTime() : new Date(aValue).getTime()
-      const bTime = bValue instanceof Date ? bValue.getTime() : new Date(bValue).getTime()
+      const aTime = aValue instanceof Date ? aValue.getTime() : aValue ? new Date(aValue).getTime() : 0
+      const bTime = bValue instanceof Date ? bValue.getTime() : bValue ? new Date(bValue).getTime() : 0
       return bTime - aTime
     }
   })
@@ -455,34 +483,85 @@ const handleTreeSelect = (_selectedKeys: string[], info: { selected: boolean; no
   }
   console.log('选中的节点数据:', selectedNode)
 }
-
-const handleTreeDrop = ({ dragNode, dropNode }: { dragNode: Document | Folder; dropNode: Document | Folder }) => {
+const expandedKeys = ref<string[]>([])
+const handleTreeExpand = (keys: string[]) => {
+  expandedKeys.value = keys
+}
+const handleTreeDrop = async ({
+  dragNode,
+  dropNode,
+  dropPosition,
+  dropToGap
+}: {
+  dragNode: Document | Folder
+  dropNode?: Document | Folder // 可能为空，表示拖到根
+  dropPosition?: number
+  dropToGap?: boolean
+}) => {
   console.log('拖动节点:', dragNode)
   console.log('目标节点:', dropNode)
+  console.log("dropPostion:", dropPosition)
+  console.log("dropGap:", dropToGap)
   const oldKeys = [...expandedKeys.value]
+  console.log("oldkeys:", oldKeys)
 
-  // 拖动的是文档还是文件夹？
+  // 判断是否拖到根目录
+  const dropToRoot = !dropNode || dropNode.type !== 'folder'
+  console.log("是否拖到根目录", dropToRoot)
   if (dragNode.type === 'document') {
-    // 调用移动文档 API
-    const targetFolderId = dropNode.type === 'folder' ? dropNode.id : dropNode.folder_id
+    const targetFolderId = dropToRoot ? null : dropNode.type === 'folder' ? dropNode.id : (dropNode as Document).folder_id
+
     if (targetFolderId !== dragNode.folder_id) {
-      documentStore.moveDocument(dragNode.id, targetFolderId)
-    }
-  } else if (dragNode.type === 'folder') {
-    // 校验不能拖到自己或子文件夹
-    if (dropNode.type === "folder" && dragNode.id === dropNode.id || dropNode.type == "document" && dragNode.id === dropNode.folder_id) {
-      console.log("不能拖到自己或子文件夹")
+      await documentStore.moveDocument(dragNode.id, targetFolderId)
     } else {
-      folderStore.moveFolder(dragNode.id, dropNode.type === 'folder' ? dropNode.id : dropNode.folder_id)
+      return
+    }
+
+  } else if (dragNode.type === 'folder') {
+    // 校验不能拖到自己或其子文件夹
+    const isInvalidDrop =
+      (dropNode?.type === 'folder' && (dragNode.id === dropNode.id || dragNode.parent_folder_id === dropNode.id)) ||
+      (dropNode?.type === 'document' && (dragNode.id === dropNode.folder_id))
+
+    if (isInvalidDrop) {
+      return
+    }
+
+    const targetParentId =
+      dropToRoot
+        ? null
+        : dropNode.type === 'folder'
+          ? dropNode.id
+          : (dropNode as Document).folder_id
+
+    if (targetParentId !== dragNode.parent_folder_id) {
+      await folderStore.moveFolder(dragNode.id, targetParentId)
+    } else {
+      return
+
     }
   }
-  // Message.success('已完成拖动操作')
+
   // 恢复展开状态
-  console.log("拖动前", oldKeys)
-  // await documentStore.loadDocumentTree()
   expandedKeys.value = oldKeys
   console.log("拖动后", expandedKeys.value)
-  // handleTreeExpand(oldKeys)
+}
+
+const handleDropToRoot = async (e: DragEvent) => {
+  const raw = e.dataTransfer?.getData('application/json')
+  if (!raw) return
+  const data = JSON.parse(raw) as Document | Folder
+
+  if (data.type === 'document') {
+    await documentStore.moveDocument(data.id, null)
+  } else if (data.type === 'folder') {
+    await folderStore.moveFolder(data.id, null)
+  }
+
+  // Message.success('已移动到根目录')
+}
+const handleDragStart = (e: DragEvent, node: TreeNode) => {
+  e.dataTransfer?.setData('application/json', JSON.stringify(node))
 }
 
 
@@ -556,6 +635,21 @@ const createFromTemplate = (template: Template) => {
 </script>
 
 <style scoped>
+.root-drop-zone {
+  padding: 8px;
+  margin-bottom: 10px;
+  background-color: #f7f8fa;
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-2);
+  text-align: center;
+  cursor: pointer;
+  font-size: 13px;
+}
+.root-drop-zone:hover {
+  background-color: #e8f4ff;
+}
+
 .home-page {
   padding: 24px;
   max-width: 1440px;

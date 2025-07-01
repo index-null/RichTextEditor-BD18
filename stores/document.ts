@@ -1,11 +1,10 @@
 import { Message } from "@arco-design/web-vue"
-import { recentDocumentsAPI, getDocumentTreeAPI, deleteDocumentAPI, createDocumentAPI, updateDocumentAPI, getDocumentDetailAPI,  moveDocumentAPI } from "~/apis/document"
-
-
+import { recentDocumentsAPI, getDocumentTreeAPI, deleteDocumentAPI, createDocumentAPI, updateDocumentAPI, getDocumentDetailAPI, moveDocumentAPI } from "~/apis/document"
 
 export interface Document {
   id: number
   title: string
+  key:string
   content: string
   author: string
   author_id: number
@@ -18,8 +17,10 @@ export interface Document {
 
 export interface Folder {
   id: number
+  key:string
   title: string
-  type: 'folder'
+  type: 'folder',
+  parent_folder_id: number
   children: (Document | Folder)[]
 }
 
@@ -29,11 +30,27 @@ export interface User {
   color: string
   isOnline: boolean
 }
-
+export interface DocumentTree {
+  id: number
+  key: string
+  title: string
+  type: 'folder' | 'document',
+  parent_folder_id?: number | null,
+  folder_id?: number | null,
+  children?: DocumentTree[]
+ 
+  content?: string
+  author?: string
+  author_id?: number
+  
+  createdAt?: Date
+  updatedAt?: Date
+  size?: string
+}
 export const useDocumentStore = defineStore('document', () => {
   // 状态
   const currentDocument = ref<Document | null>(null)
-  const documentTree = ref<(Document | Folder)[]>([])
+  const documentTree = ref<DocumentTree[]>([])
   const recentDocuments = ref<Document[]>([])
   const onlineUsers = ref<User[]>([])
   const isLoading = ref(false)
@@ -42,8 +59,8 @@ export const useDocumentStore = defineStore('document', () => {
 
   // Getters
   const allDocuments = computed(() => {
-    const docs: Document[] = []
-    const extractDocs = (items: (Document | Folder)[]) => {
+    const docs: DocumentTree[] = []
+    const extractDocs = (items: DocumentTree[]) => {
       items.forEach(item => {
         if (item.type === 'document') {
           docs.push(item as Document)
@@ -57,7 +74,7 @@ export const useDocumentStore = defineStore('document', () => {
   })
   const myDocuments = computed(() => {
     const docs: Document[] = []
-    const extractMyDocs = (items: (Document | Folder)[]) => {
+    const extractMyDocs = (items: DocumentTree[]) => {
       items.forEach(item => {
         if (item.type === 'document' && item.author_id === userId.value) {
           docs.push(item as Document)
@@ -135,7 +152,7 @@ export const useDocumentStore = defineStore('document', () => {
     // 模拟添加到本地状态
     if (folderId) {
       // 添加到指定文件夹
-      const addToFolder = (items: (Document | Folder)[]) => {
+      const addToFolder = (items: DocumentTree[]) => {
         items.forEach(item => {
           if (item.type === 'folder' && item.id === folderId) {
             ; (item as Folder).children.push(newDocument)
@@ -178,13 +195,13 @@ export const useDocumentStore = defineStore('document', () => {
   const deleteDocument = async (documentId: number) => {
     try {
       // 删除树中文档
-      const removeFromTree = (items: (Document | Folder)[]) => {
+      const removeFromTree = (items: DocumentTree[]) => {
         return items.filter(item => {
-          if (item.id === documentId) {
+          if (item.type==='document'&&item.id === documentId) {
             return false
           }
           if (item.type === 'folder') {
-            ; (item as Folder).children = removeFromTree((item as Folder).children)
+            item.children = removeFromTree((item as Folder).children)
           }
           return true
         })
@@ -202,9 +219,9 @@ export const useDocumentStore = defineStore('document', () => {
       console.error('删除文档失败:', error)
     }
   }
-  const moveDocument=async(documentId:number,targetFolderId:number|null)=>{
-    const result=await moveDocumentAPI(documentId,targetFolderId)
-    if(result.status===200){
+  const moveDocument = async (documentId: number, targetFolderId: number | null) => {
+    const result = await moveDocumentAPI(documentId, targetFolderId)
+    if (result.status === 200) {
       await loadDocumentTree()
       Message.success("文件移动成功")
 
