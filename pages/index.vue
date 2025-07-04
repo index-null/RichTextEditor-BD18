@@ -8,7 +8,7 @@
           <span class="gradient-text">{{ userName }}</span>
         </h1>
         <p class="welcome-subtitle">今天想要创建什么样的文档？</p>
-        
+
         <!-- 快速操作 -->
         <div class="quick-actions">
           <AButton type="primary" size="large" @click="createNewDocument">
@@ -25,12 +25,12 @@
           </AButton>
         </div>
       </div>
-      
+
       <!-- 统计卡片 -->
       <div class="stat-cards">
         <ACard class="stat-card" :bordered="false">
-          <AStatistic 
-            title="文档总数" 
+          <AStatistic
+            title="文档总数"
             :value="totalDocuments"
             :value-style="{ color: 'rgb(var(--primary-6))' }"
           >
@@ -40,8 +40,8 @@
           </AStatistic>
         </ACard>
         <ACard class="stat-card" :bordered="false">
-          <AStatistic 
-            title="今日编辑" 
+          <AStatistic
+            title="今日编辑"
             :value="todayEdited"
             :value-style="{ color: 'rgb(var(--success-6))' }"
           >
@@ -51,8 +51,8 @@
           </AStatistic>
         </ACard>
         <ACard class="stat-card" :bordered="false">
-          <AStatistic 
-            title="协作人数" 
+          <AStatistic
+            title="协作人数"
             :value="collaborators"
             :value-style="{ color: 'rgb(var(--warning-6))' }"
           >
@@ -75,11 +75,11 @@
                 <template #icon><Icon name="ri:add-line" /></template>
               </AButton>
             </template>
-            
+
             <ASpin :loading="loading" tip="加载中...">
-              <ATree 
+              <ATree
                 v-if="documentTree.length > 0"
-                :data="documentTree" 
+                :data="documentTree"
                 :default-expand-all="true"
                 :draggable="true"
                 @select="handleTreeSelect"
@@ -87,10 +87,19 @@
               >
                 <template #title="nodeData">
                   <div class="tree-node">
-                    <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
+                    <Icon
+                      :name="
+                        nodeData.type === 'folder'
+                          ? 'ri:folder-3-line'
+                          : 'ri:file-text-line'
+                      "
+                    />
                     <span class="node-title">{{ nodeData.title }}</span>
                     <div class="node-actions">
-                      <ADropdown trigger="click" @select="(value) => handleNodeAction(value, nodeData)">
+                      <ADropdown
+                        trigger="click"
+                        @select="(value) => handleNodeAction(value, nodeData)"
+                      >
                         <Icon name="ri:more-line" class="action-icon" />
                         <template #content>
                           <ADoption value="rename">重命名</ADoption>
@@ -114,10 +123,10 @@
               <h2 class="section-title">最近文档</h2>
               <ALink @click="navigateTo('/documents')">查看全部</ALink>
             </div>
-            
+
             <div v-if="recentDocuments.length > 0" class="document-grid">
-              <ACard 
-                v-for="doc in recentDocuments" 
+              <ACard
+                v-for="doc in recentDocuments"
                 :key="doc.id"
                 class="document-card"
                 hoverable
@@ -128,19 +137,22 @@
                     <Icon name="ri:file-text-line" :size="48" />
                   </div>
                 </template>
-                
+
                 <ACardMeta>
                   <template #title>
                     <div class="document-title">{{ doc.title }}</div>
                   </template>
                   <template #description>
                     <div class="document-meta">
-                      <span><Icon name="ri:time-line" /> {{ formatDate(doc.updatedAt) }}</span>
+                      <span
+                        ><Icon name="ri:time-line" />
+                        {{ formatDate(doc.updatedAt) }}</span
+                      >
                       <span><Icon name="ri:user-line" /> {{ doc.author }}</span>
                     </div>
                   </template>
                 </ACardMeta>
-                
+
                 <template #actions>
                   <span><Icon name="ri:star-line" /></span>
                   <span><Icon name="ri:share-line" /></span>
@@ -163,7 +175,7 @@
             <div class="section-header">
               <h2 class="section-title">所有文档</h2>
               <ASpace>
-                <AInput 
+                <AInput
                   v-model="searchKeyword"
                   placeholder="搜索文档"
                   allow-clear
@@ -173,27 +185,34 @@
                     <Icon name="ri:search-line" />
                   </template>
                 </AInput>
-                <ASelect v-model="sortBy" placeholder="排序方式" style="width: 120px">
+                <ASelect
+                  v-model="sortBy"
+                  placeholder="排序方式"
+                  style="width: 120px"
+                >
                   <AOption value="updatedAt">最近修改</AOption>
                   <AOption value="createdAt">创建时间</AOption>
                   <AOption value="title">名称</AOption>
                 </ASelect>
               </ASpace>
             </div>
-            
-            <ATable 
-              :data="filteredDocuments" 
+
+            <ATable
+              :data="filteredDocuments"
               :columns="documentColumns"
               :pagination="{
                 pageSize: 10,
                 showTotal: true,
                 showJumper: true,
-                showPageSize: true
+                showPageSize: true,
               }"
               :loading="loading"
             >
               <template #name="{ record }">
-                <div class="table-document-name" @click="openDocument(record.id)">
+                <div
+                  class="table-document-name"
+                  @click="openDocument(record.id)"
+                >
                   <Icon name="ri:file-text-line" />
                   <span>{{ record.title }}</span>
                   <ABadge v-if="record.isNew" text="New" :offset="[10, 0]" />
@@ -206,18 +225,28 @@
               </template>
               <template #actions="{ record }">
                 <ASpace>
-                  <AButton type="text" size="mini" @click="openDocument(record.id)">
+                  <AButton
+                    type="text"
+                    size="mini"
+                    @click="openDocument(record.id)"
+                  >
                     <template #icon><Icon name="ri:edit-line" /></template>
                   </AButton>
-                  <AButton type="text" size="mini" @click="shareDocument(record)">
+                  <AButton
+                    type="text"
+                    size="mini"
+                    @click="shareDocument(record)"
+                  >
                     <template #icon><Icon name="ri:share-line" /></template>
                   </AButton>
-                  <APopconfirm 
-                    content="确定要删除这个文档吗？" 
+                  <APopconfirm
+                    content="确定要删除这个文档吗？"
                     @ok="deleteDocument(record.id)"
                   >
                     <AButton type="text" size="mini" status="danger">
-                      <template #icon><Icon name="ri:delete-bin-line" /></template>
+                      <template #icon
+                        ><Icon name="ri:delete-bin-line"
+                      /></template>
                     </AButton>
                   </APopconfirm>
                 </ASpace>
@@ -229,41 +258,33 @@
     </div>
 
     <!-- 导入文档模态框 -->
-    <AModal 
-      v-model:visible="showImportModal" 
+    <AModal
+      v-model:visible="showImportModal"
       title="导入文档"
       :width="480"
       @ok="handleImport"
     >
-      <AUpload
-        draggable
-        accept=".md,.txt,.docx"
-        :custom-request="customUpload"
-      >
+      <AUpload draggable accept=".md,.txt,.docx" :custom-request="customUpload">
         <template #upload-button>
           <div class="upload-demo-draggable">
             <Icon name="ri:upload-cloud-line" :size="48" />
-            <div class="upload-text">
-              点击或拖拽文件到此处上传
-            </div>
-            <div class="upload-hint">
-              支持 .md, .txt, .docx 格式
-            </div>
+            <div class="upload-text">点击或拖拽文件到此处上传</div>
+            <div class="upload-hint">支持 .md, .txt, .docx 格式</div>
           </div>
         </template>
       </AUpload>
     </AModal>
 
     <!-- 模板选择模态框 -->
-    <AModal 
-      v-model:visible="showTemplateModal" 
+    <AModal
+      v-model:visible="showTemplateModal"
       title="选择模板"
       :width="720"
       :footer="false"
     >
       <div class="template-grid">
-        <ACard 
-          v-for="template in templates" 
+        <ACard
+          v-for="template in templates"
           :key="template.id"
           class="template-card"
           hoverable
@@ -281,31 +302,31 @@
 </template>
 
 <script setup lang="ts">
-import { Message } from '@arco-design/web-vue'
+import { Message } from "@arco-design/web-vue";
 
 // 类型定义
 interface Document {
-  id: string
-  title: string
-  updatedAt: Date
-  createdAt: Date
-  author: string
-  size: string
-  isNew?: boolean
+  id: string;
+  title: string;
+  updatedAt: Date;
+  createdAt: Date;
+  author: string;
+  size: string;
+  isNew?: boolean;
 }
 
 interface TreeNode {
-  key: string
-  title: string
-  type: 'folder' | 'document'
-  children?: TreeNode[]
+  key: string;
+  title: string;
+  type: "folder" | "document";
+  children?: TreeNode[];
 }
 
 interface Template {
-  id: string
-  name: string
-  description: string
-  icon: string
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
 }
 
 //举例说明删除数据输入,可删除
@@ -405,22 +426,20 @@ console.log(data);
   
 }
 
-
-
 //测试token，需要更改为每次登陆时临时生成的Token。在Login_API函数中用data.body.token获得登录的Token，然后保存下来。
-const token_Input = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywidXNlcm5hbWUiOiJ0ZXN0dXNlcjMiLCJ1c2VyX2dyb3VwIjoidXNlciIsImlhdCI6MTc1MTYxMzI2NywiZXhwIjoxNzUxNjIwNDY3fQ.rqXK8EIYWDjTeMOt0hqXHZLXSGpBdvAgJjS36GPeZ7c";
+const token_Input = null;
 
 // 后端API
 const profile = (token_Input) =>{
 
 const token = token_Input
-fetch('/api/auth/profile', {
-  method: 'GET',
+const folderId = folderId_Input
+fetch(`/api/folders/${folderId}`, {
+  method: 'DELETE',
   headers: {
-    'Authorization': `Bearer ${token}`
-  }
+    'Authorization': `Bearer ${token}`,
+  },
  
-
 }).then(response => {
   if (!response.ok) {
     throw new Error('Network response was not ok');
@@ -428,384 +447,378 @@ fetch('/api/auth/profile', {
   return response.json();
 })
 .then(data => {
- 
 console.log(data.message, data.user);
 console.log(data);
-
 })
 .catch(error => {
   console.error('Error during registration:', error);
   // 处理错误
 });
   
-
 }
 
 //举例说明登录数据输入,可删除
-//  const loginData_Input = {};
-const loginData_Input = {
-   username: "testuser3",
-  password: "mypassword",
-}
+ const loginData_Input = {};
 
-const login_API = (loginData_Input) =>{
+const login_API = (loginData_Input) => {
+  const loginData = loginData_Input;
 
-  const loginData = loginData_Input
-
-fetch('/api/auth/login', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify(loginData),
-}).then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-})
-.then(data => {
- 
-console.log(data.statusCode, data.body);
-// 这里可以用data.body.token获得登录的Token
-
-
-})
-.catch(error => {
-  console.error('Error during registration:', error);
-  // 处理错误
-});
-
-}
-
-
+  fetch("/api/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(loginData),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log(data.statusCode, data.body);
+      // 这里可以用data.body.token获得登录的Token
+    })
+    .catch((error) => {
+      console.error("Error during registration:", error);
+      // 处理错误
+    });
+};
 
 // 举例registerData_Input的输入形式,可删除
 const registerData_Input = {};
 
-const register_API = (registerData_Input) =>{
+const register_API = (registerData_Input) => {
+  const registerData = registerData_Input;
 
-const registerData = registerData_Input
-
-fetch('/api/auth/register', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify(registerData)
-})
-.then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-})
-.then(data => {
-  console.log('Registration successful:', data);
-  // 处理注册成功后的逻辑
-})
-.catch(error => {
-  console.error('Error during registration:', error);
-  // 处理错误
-});
-
-}
-
-
-
+  fetch("/api/auth/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(registerData),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Registration successful:", data);
+      // 处理注册成功后的逻辑
+    })
+    .catch((error) => {
+      console.error("Error during registration:", error);
+      // 处理错误
+    });
+};
 
 // 响应式数据
-const userName = ref('用户')
-const loading = ref(false)
-const searchKeyword = ref('')
-const sortBy = ref('updatedAt')
-const showImportModal = ref(false)
-const showTemplateModal = ref(false)
+const userName = ref("用户");
+const loading = ref(false);
+const searchKeyword = ref("");
+const sortBy = ref("updatedAt");
+const showImportModal = ref(false);
+const showTemplateModal = ref(false);
 
 // 统计数据
-const totalDocuments = ref(23)
-const todayEdited = ref(5)
-const collaborators = ref(8)
+const totalDocuments = ref(23);
+const todayEdited = ref(5);
+const collaborators = ref(8);
 
 // 文档数据
 const documentTree = ref<TreeNode[]>([
   {
-    key: '1',
-    title: '工作文档',
-    type: 'folder',
+    key: "1",
+    title: "工作文档",
+    type: "folder",
     children: [
-      { key: '1-1', title: '项目计划.md', type: 'document' },
-      { key: '1-2', title: '需求文档.md', type: 'document' }
-    ]
+      { key: "1-1", title: "项目计划.md", type: "document" },
+      { key: "1-2", title: "需求文档.md", type: "document" },
+    ],
   },
   {
-    key: '2', 
-    title: '个人笔记',
-    type: 'folder',
-    children: [
-      { key: '2-1', title: '学习笔记.md', type: 'document' }
-    ]
-  }
-])
+    key: "2",
+    title: "个人笔记",
+    type: "folder",
+    children: [{ key: "2-1", title: "学习笔记.md", type: "document" }],
+  },
+]);
 
-const recentDocuments = ref<Pick<Document, 'id' | 'title' | 'updatedAt' | 'author' | 'isNew'>[]>([
+const recentDocuments = ref<
+  Pick<Document, "id" | "title" | "updatedAt" | "author" | "isNew">[]
+>([
   {
-    id: '1',
-    title: '项目技术方案',
-    updatedAt: new Date('2024-01-15'),
-    author: '张三',
-    isNew: true
+    id: "1",
+    title: "项目技术方案",
+    updatedAt: new Date("2024-01-15"),
+    author: "张三",
+    isNew: true,
   },
   {
-    id: '2', 
-    title: '产品需求文档',
-    updatedAt: new Date('2024-01-14'),
-    author: '李四'
+    id: "2",
+    title: "产品需求文档",
+    updatedAt: new Date("2024-01-14"),
+    author: "李四",
   },
   {
-    id: '3',
-    title: '会议纪要',
-    updatedAt: new Date('2024-01-13'),
-    author: '王五'
-  }
-])
+    id: "3",
+    title: "会议纪要",
+    updatedAt: new Date("2024-01-13"),
+    author: "王五",
+  },
+]);
 
 const myDocuments = ref<Document[]>([
   {
-    id: '1',
-    title: '项目技术方案',
-    updatedAt: new Date('2024-01-15'),
-    createdAt: new Date('2024-01-10'),
-    author: '张三',
-    size: '2.3KB',
-    isNew: true
+    id: "1",
+    title: "项目技术方案",
+    updatedAt: new Date("2024-01-15"),
+    createdAt: new Date("2024-01-10"),
+    author: "张三",
+    size: "2.3KB",
+    isNew: true,
   },
   {
-    id: '2',
-    title: '产品需求文档', 
-    updatedAt: new Date('2024-01-14'),
-    createdAt: new Date('2024-01-09'),
-    author: '李四',
-    size: '1.8KB'
+    id: "2",
+    title: "产品需求文档",
+    updatedAt: new Date("2024-01-14"),
+    createdAt: new Date("2024-01-09"),
+    author: "李四",
+    size: "1.8KB",
   },
   {
-    id: '3',
-    title: '会议纪要',
-    updatedAt: new Date('2024-01-13'),
-    createdAt: new Date('2024-01-08'),
-    author: '王五',
-    size: '0.9KB'
-  }
-])
+    id: "3",
+    title: "会议纪要",
+    updatedAt: new Date("2024-01-13"),
+    createdAt: new Date("2024-01-08"),
+    author: "王五",
+    size: "0.9KB",
+  },
+]);
 
 // 模板数据
 const templates: Template[] = [
   {
-    id: '1',
-    name: '会议纪要',
-    description: '用于记录会议内容和决议',
-    icon: 'ri:file-list-3-line'
+    id: "1",
+    name: "会议纪要",
+    description: "用于记录会议内容和决议",
+    icon: "ri:file-list-3-line",
   },
   {
-    id: '2',
-    name: '项目提案',
-    description: '项目计划和提案模板',
-    icon: 'ri:lightbulb-line'
+    id: "2",
+    name: "项目提案",
+    description: "项目计划和提案模板",
+    icon: "ri:lightbulb-line",
   },
   {
-    id: '3',
-    name: '技术文档',
-    description: '技术规范和API文档',
-    icon: 'ri:code-s-slash-line'
+    id: "3",
+    name: "技术文档",
+    description: "技术规范和API文档",
+    icon: "ri:code-s-slash-line",
   },
   {
-    id: '4',
-    name: '周报模板',
-    description: '每周工作总结模板',
-    icon: 'ri:calendar-check-line'
-  }
-]
+    id: "4",
+    name: "周报模板",
+    description: "每周工作总结模板",
+    icon: "ri:calendar-check-line",
+  },
+];
 
 // 表格列配置
 const documentColumns = [
-  { 
-    title: '文档名称', 
-    dataIndex: 'title', 
-    slotName: 'name',
+  {
+    title: "文档名称",
+    dataIndex: "title",
+    slotName: "name",
     ellipsis: true,
     tooltip: true,
-    width: 300
+    width: 300,
   },
-  { 
-    title: '最后修改', 
-    dataIndex: 'updatedAt', 
-    slotName: 'updatedAt',
-    width: 150
+  {
+    title: "最后修改",
+    dataIndex: "updatedAt",
+    slotName: "updatedAt",
+    width: 150,
   },
-  { 
-    title: '作者', 
-    dataIndex: 'author',
+  {
+    title: "作者",
+    dataIndex: "author",
     ellipsis: true,
-    width: 100
+    width: 100,
   },
-  { 
-    title: '大小', 
-    dataIndex: 'size',
-    width: 80
+  {
+    title: "大小",
+    dataIndex: "size",
+    width: 80,
   },
-  { 
-    title: '操作', 
-    slotName: 'actions', 
+  {
+    title: "操作",
+    slotName: "actions",
     width: 120,
-    align: 'center'
-  }
-]
+    align: "center",
+  },
+];
 
 // 计算属性
 const filteredDocuments = computed(() => {
-  let docs = [...myDocuments.value]
-  
+  let docs = [...myDocuments.value];
+
   // 搜索过滤
   if (searchKeyword.value) {
-    docs = docs.filter(doc => 
-      doc.title.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
-      doc.author.toLowerCase().includes(searchKeyword.value.toLowerCase())
-    )
+    docs = docs.filter(
+      (doc) =>
+        doc.title.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
+        doc.author.toLowerCase().includes(searchKeyword.value.toLowerCase())
+    );
   }
-  
+
   // 排序
   docs.sort((a, b) => {
-    if (sortBy.value === 'title') {
-      return a.title.localeCompare(b.title)
+    if (sortBy.value === "title") {
+      return a.title.localeCompare(b.title);
     } else {
       // 安全的日期属性访问
-      const aValue = sortBy.value === 'updatedAt' ? a.updatedAt : a.createdAt
-      const bValue = sortBy.value === 'updatedAt' ? b.updatedAt : b.createdAt
+      const aValue = sortBy.value === "updatedAt" ? a.updatedAt : a.createdAt;
+      const bValue = sortBy.value === "updatedAt" ? b.updatedAt : b.createdAt;
       // 确保日期值存在且转换为时间戳
-      const aTime = aValue instanceof Date ? aValue.getTime() : new Date(aValue).getTime()
-      const bTime = bValue instanceof Date ? bValue.getTime() : new Date(bValue).getTime()
-      return bTime - aTime
+      const aTime =
+        aValue instanceof Date ? aValue.getTime() : new Date(aValue).getTime();
+      const bTime =
+        bValue instanceof Date ? bValue.getTime() : new Date(bValue).getTime();
+      return bTime - aTime;
     }
-  })
-  
-  return docs
-})
+  });
+
+  return docs;
+});
 
 // 工具函数
 const formatDate = (date: Date) => {
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
   if (days === 0) {
-    return '今天'
+    return "今天";
   } else if (days === 1) {
-    return '昨天'
+    return "昨天";
   } else if (days < 7) {
-    return `${days} 天前`
+    return `${days} 天前`;
   } else {
-    return new Intl.DateTimeFormat('zh-CN', {
-      month: '2-digit',
-      day: '2-digit'
-    }).format(date)
+    return new Intl.DateTimeFormat("zh-CN", {
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
   }
-}
+};
 
 const formatFullDate = (date: Date) => {
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit', 
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date)
-}
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
 
 // 事件处理
 const createNewDocument = () => {
-  navigateTo('/document/new')
-}
+  navigateTo("/document/new");
+};
 
 const createNewFolder = () => {
-  Message.info('创建文件夹功能开发中...')
-}
+  Message.info("创建文件夹功能开发中...");
+};
 
 const handleTreeSelect = (selectedKeys: string[]) => {
-  console.log('选中的节点:', selectedKeys)
-}
+  console.log("选中的节点:", selectedKeys);
+};
 
-const handleTreeDrop = (_params: { dragNode: TreeNode; dropNode: TreeNode; dropPosition: number }) => {
-  Message.success('文档已移动')
-}
+const handleTreeDrop = (_params: {
+  dragNode: TreeNode;
+  dropNode: TreeNode;
+  dropPosition: number;
+}) => {
+  Message.success("文档已移动");
+};
 
 const openDocument = (documentId: string) => {
-  navigateTo(`/document/${documentId}`)
-}
+  navigateTo(`/document/${documentId}`);
+};
 
-const shareDocument = (doc: Pick<Document, 'id' | 'title'>) => {
-  Message.info(`分享文档: ${doc.title}`)
-}
+const shareDocument = (doc: Pick<Document, "id" | "title">) => {
+  Message.info(`分享文档: ${doc.title}`);
+};
 
 const deleteDocument = (documentId: string) => {
-  loading.value = true
+  loading.value = true;
   setTimeout(() => {
-    loading.value = false
-    Message.success('文档已删除')
-    myDocuments.value = myDocuments.value.filter(doc => doc.id !== documentId)
-  }, 1000)
-}
+    loading.value = false;
+    Message.success("文档已删除");
+    myDocuments.value = myDocuments.value.filter(
+      (doc) => doc.id !== documentId
+    );
+  }, 1000);
+};
 
 const handleNodeAction = (action: string, node: TreeNode) => {
-  if (action === 'rename') {
-    Message.info(`重命名: ${node.title}`)
-  } else if (action === 'delete') {
-    Message.warning(`删除: ${node.title}`)
+  if (action === "rename") {
+    Message.info(`重命名: ${node.title}`);
+  } else if (action === "delete") {
+    Message.warning(`删除: ${node.title}`);
   }
-}
+};
 
-const handleDocAction = (action: string, doc: Pick<Document, 'id' | 'title'>) => {
-  if (action === 'rename') {
-    Message.info(`重命名: ${doc.title}`)
-  } else if (action === 'duplicate') {
-    Message.info(`复制: ${doc.title}`)
-  } else if (action === 'delete') {
-    deleteDocument(doc.id)
+const handleDocAction = (
+  action: string,
+  doc: Pick<Document, "id" | "title">
+) => {
+  if (action === "rename") {
+    Message.info(`重命名: ${doc.title}`);
+  } else if (action === "duplicate") {
+    Message.info(`复制: ${doc.title}`);
+  } else if (action === "delete") {
+    deleteDocument(doc.id);
   }
-}
+};
 
 const handleSearch = () => {
   // 搜索逻辑已在计算属性中实现
-}
+};
 
 interface UploadOption {
-  onProgress: (percent: number) => void
-  onSuccess: (response: boolean) => void
-  onError: (error: Error) => void
-  file: { name: string }
+  onProgress: (percent: number) => void;
+  onSuccess: (response: boolean) => void;
+  onError: (error: Error) => void;
+  file: { name: string };
 }
 
 const customUpload = (option: UploadOption) => {
-  const { onProgress, onSuccess, file } = option
+  const { onProgress, onSuccess, file } = option;
   // 模拟上传
-  onProgress(50)
+  onProgress(50);
   setTimeout(() => {
-    onSuccess(true)
-    Message.success(`${file.name} 上传成功`)
-  }, 1000)
-}
+    onSuccess(true);
+    Message.success(`${file.name} 上传成功`);
+  }, 1000);
+};
 
 const handleImport = () => {
-  showImportModal.value = false
-  Message.success('文档导入成功')
-}
+  showImportModal.value = false;
+  Message.success("文档导入成功");
+};
 
 const createFromTemplate = (template: Template) => {
-  showTemplateModal.value = false
-  Message.success(`正在使用"${template.name}"模板创建文档...`)
+  showTemplateModal.value = false;
+  Message.success(`正在使用"${template.name}"模板创建文档...`);
   setTimeout(() => {
-    navigateTo('/document/new?template=' + template.id)
-  }, 500)
-}
+    navigateTo("/document/new?template=" + template.id);
+  }, 500);
+};
 </script>
 
 <style scoped>
@@ -832,7 +845,11 @@ const createFromTemplate = (template: Template) => {
 }
 
 .gradient-text {
-  background: linear-gradient(120deg, rgb(var(--primary-6)) 0%, rgb(var(--primary-5)) 100%);
+  background: linear-gradient(
+    120deg,
+    rgb(var(--primary-6)) 0%,
+    rgb(var(--primary-5)) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1056,13 +1073,13 @@ const createFromTemplate = (template: Template) => {
   .welcome-title {
     font-size: 24px;
   }
-  
+
   .stat-cards {
     grid-template-columns: 1fr;
   }
-  
+
   .document-grid {
     grid-template-columns: 1fr;
   }
 }
-</style> 
+</style>
