@@ -328,9 +328,243 @@ interface Template {
   description: string;
   icon: string;
 }
-//测试token，需要更改为每次登陆时临时生成的Token。在Login_API函数中用data.body.token获得登录的Token，然后保存下来。
-const token_Input = null;
 
+//获得当前用户组的所有文档
+const getDoc = (token_Input) =>{
+
+const token = token_Input
+fetch('/api/documents', {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+ 
+
+}).then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+ 
+console.log(data.message, data.user);
+console.log(data);
+
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+  
+
+}
+
+// 删除文档后端API
+const deleteDoc = (token_Input, docId_Input) =>{
+
+const token = token_Input
+const docId = docId_Input
+fetch(`/api/documents/${docId}`, {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+  },
+ 
+}).then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+console.log(data.message, data.user);
+console.log(data);
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+  
+}
+
+
+//举例说明更新文档内容输入,可删除
+
+const Update_Doc_Input = {
+  new_content: null,
+}
+const docId_Input = null; // 要修改内容的文档id
+
+
+// 更新文档后端API
+const updateDoc = (token_Input, Update_Doc_Input, docId_Input) =>{
+
+const token = token_Input
+const docId = docId_Input
+fetch(`/api/documents/${docId}`, {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+     'Content-Type': 'application/json', // ✅ 告诉服务器这是 JSON 格式
+  },
+  body: JSON.stringify(Update_Doc_Input),
+ 
+}).then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+console.log(data.message, data.user);
+console.log(data);
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+  
+}
+
+
+
+//举例说明创建文档,可删除
+//  const loginData_Input = {};
+const Doc_Data_Input = {
+  title: null ,
+  content: null,
+  folder_id : null
+}
+
+// 创建文档后端API
+const createDoc = (token_Input, Doc_Data_Input) =>{
+
+const token = token_Input
+fetch('/api/documents', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+     'Content-Type': 'application/json', // ✅ 告诉服务器这是 JSON 格式
+  },
+  body: JSON.stringify(Doc_Data_Input),
+ 
+}).then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+console.log(data.message, data.user);
+console.log(data);
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+  
+}
+
+//举例说明删除数据输入,可删除
+// const folderId_Input = null; // 要重命名的文件夹ID使用的文件夹ID一样
+
+// 删除文件夹后端API
+const deleteFolder = (token_Input, folderId_Input) =>{
+const token = token_Input
+const folderId = folderId_Input
+fetch(`/api/folders/${folderId}`, {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+  },
+ 
+}).then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+console.log(data.message, data.user);
+console.log(data);
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+  
+}
+
+//举例说明重命名数据输入,可删除
+const reName_Data_Input = null
+const folderId_Input = null; // 要重命名的文件夹ID
+
+// 重命名文件夹后端API
+const reNameFolder = (token_Input, reName_Data_Input, folderId_Input) =>{
+
+const token = token_Input
+const folderId = folderId_Input
+fetch(`/api/folders/${folderId}`, {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+     'Content-Type': 'application/json', // ✅ 告诉服务器这是 JSON 格式
+  },
+  body: JSON.stringify(reName_Data_Input),
+ 
+}).then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+console.log(data.message, data.user);
+console.log(data);
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+  
+}
+
+
+//举例说明创建文件夹数据输入,可删除
+const folder_Data_Input = null
+
+// 创建文件夹后端API
+const createFolder = (token_Input, folder_Data_Input) =>{
+
+const token = token_Input
+fetch('/api/folders', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+     'Content-Type': 'application/json', // ✅ 告诉服务器这是 JSON 格式
+  },
+  body: JSON.stringify(folder_Data_Input),
+ 
+}).then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+})
+.then(data => {
+console.log(data.message, data.user);
+console.log(data);
+})
+.catch(error => {
+  console.error('Error during registration:', error);
+  // 处理错误
+});
+  
+}
+
+//测试token，需要更改为每次登陆时临时生成的Token。在Login_API函数中用data.body.token获得登录的Token，然后保存下来。
+const token_Input = null
 // 后端API
 const profile = (token_Input) => {
   const token = token_Input;
