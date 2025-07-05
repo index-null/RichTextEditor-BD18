@@ -249,7 +249,7 @@
             最后编辑于
             <ASpin v-if="editTimeLoading&&!lastEditTime" size="small" style="margin-left: 6px;" />
             <template v-else>
-              {{ lastEditTime || '未知时间' }}
+              {{ lastEditTime }}
             </template>
           </span>
         <span>

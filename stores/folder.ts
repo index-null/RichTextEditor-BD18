@@ -23,6 +23,7 @@ export const useFolderStore = defineStore('folder', () => {
         const result = await deleteFolderAPI(folderId)
         if (result.status === 200) {
             await documentStore.loadDocumentTree()
+            Message.success("文件夹删除成功")
         }
     }
     const renameFolder=async(folderId:number,title:string)=>{

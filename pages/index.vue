@@ -9,7 +9,6 @@
         </h1>
         <p class="welcome-subtitle">今天想要创建什么样的文档？</p>
 
-
         <!-- 快速操作 -->
         <div class="quick-actions">
           <AButton type="primary" size="large" @click="createNewDocument">
@@ -87,7 +86,7 @@
                 :expanded-keys="expandedKeys" @update:expanded-keys="(keys) => expandedKeys = keys"
                 @select="handleTreeSelect" @expand="handleTreeExpand" @drop="handleTreeDrop"
                 @drag-start="handleDragStart">
-             <template #title="nodeData">
+                <template #title="nodeData">
                   <div class="tree-node">
                     <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
 
@@ -95,13 +94,13 @@
                     <template v-if="nodeData.key === 'temp_folder'">
                       <input ref="folderInputRef" class="temp-folder-input" v-model="newFolderTitle"
                         @blur="handleCreateConfirm" @keyup.enter="handleCreateConfirm" @keyup.esc="cancelNewFolder"
-                        placeholder="请输入文件夹名称"  />
+                        placeholder="请输入文件夹名称" />
                     </template>
 
                     <!-- ✅ 正在重命名的输入框 -->
                     <template v-else-if="editingNode?.id === nodeData.id && editingNode?.type === nodeData.type">
                       <input ref="renameInputRef" class="rename-input" v-model="renameTitle" @blur="confirmRename"
-                        @keyup.enter="confirmRename" @keyup.esc="cancelRename" placeholder="请输入新名称"  />
+                        @keyup.enter="confirmRename" @keyup.esc="cancelRename" placeholder="请输入新名称" />
                     </template>
 
                     <!-- ✅ 默认展示 -->
@@ -217,7 +216,7 @@
                   <ABadge v-if="record.isNew" text="New" :offset="[10, 0]" />
                 </div>
 
-               
+
               </template>
               <template #updatedAt="{ record }">
                 <ATooltip :content="formatFullDate(record.updatedAt)">
@@ -317,7 +316,7 @@ interface Template {
 
 // 响应式数据
 const userStore = useAuthStore()
-const userName = userStore.user?.username || "用户"
+const userName = userStore.user?.nickname || "用户"
 const loading = ref(false)
 const searchKeyword = ref('')
 const sortBy = ref('updatedAt')
@@ -522,7 +521,6 @@ const formatFullDate = (date: Date | string) => {
 // 事件处理
 const createNewDocument = async () => {
   // 创建新文档
-  console.log(selectFolderId.value)
   const data = await documentStore.createDocument("新建文档", selectFolderId.value)
   navigateTo(`/document/${data.id}`)
 }
@@ -531,7 +529,7 @@ const createNewFolder = () => {
   newFolderNode.value = { parentId }
 
   // ✅ 第 1 步：展开父节点（确保更新）
-  const pidStr = "folder_"+parentId
+  const pidStr = "folder_" + parentId
   if (parentId !== null && !expandedKeys.value.includes(pidStr)) {
     expandedKeys.value = [...expandedKeys.value, pidStr] // 触发响应式
   }
@@ -637,9 +635,7 @@ const handleTreeExpand = (keys: string[]) => {
 }
 const handleTreeDrop = async ({
   dragNode,
-  dropNode,
-  dropPosition,
-  dropToGap
+  dropNode
 }: {
   dragNode: Document | Folder
   dropNode?: Document | Folder // 可能为空，表示拖到根
@@ -648,14 +644,12 @@ const handleTreeDrop = async ({
 }) => {
   console.log('拖动节点:', dragNode)
   console.log('目标节点:', dropNode)
-  console.log("dropPostion:", dropPosition)
-  console.log("dropGap:", dropToGap)
+
   const oldKeys = [...expandedKeys.value]
   console.log("oldkeys:", oldKeys)
 
   // 判断是否拖到根目录
   const dropToRoot = !dropNode || dropNode.type !== 'folder'
-  console.log("是否拖到根目录", dropToRoot)
   if (dragNode.type === 'document') {
     const targetFolderId = dropToRoot ? null : dropNode.type === 'folder' ? dropNode.id : (dropNode as Document).folder_id
 
@@ -748,10 +742,11 @@ const confirmRename = async () => {
     if (node.type === 'folder') {
       await folderStore.renameFolder(node.id, title)
     } else {
-      await documentStore.updateDocument(node.id, { title:title })
+      await documentStore.updateDocument(node.id, { title: title })
     }
     // await documentStore.loadDocumentTree()
     updateNodeTitle(node.id, node.type, title)
+    await documentStore.loadRecentDocuments()
   } catch (err) {
     console.error(err)
     Message.error('重命名失败')
@@ -858,6 +853,7 @@ const createFromTemplate = (template: Template) => {
   width: 160px;
   outline: none;
 }
+
 .root-drop-zone {
   padding: 8px;
   margin-bottom: 10px;
