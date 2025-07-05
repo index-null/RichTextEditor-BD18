@@ -1,46 +1,69 @@
-export interface CustomDocument {
-  id: string
+import { Message } from "@arco-design/web-vue"
+import { recentDocumentsAPI, getDocumentTreeAPI, deleteDocumentAPI, createDocumentAPI, updateDocumentAPI, getDocumentDetailAPI, moveDocumentAPI } from "~/api/document"
+
+import { useAuthStore } from "~/stores/auth"
+export interface Document {
+  id: number
   title: string
+  key:string
   content: string
   author: string
+  author_id: number
+  folder_id: number | null
   createdAt: Date
   updatedAt: Date
   size?: string
   type: 'document'
 }
+
+export interface Folder {
+  id: number
+  key:string
+  title: string
+  type: 'folder',
+  parent_folder_id: number
+  children: (Document | Folder)[]
+}
+
 export interface User {
   id: string
   name: string
   color: string
   isOnline: boolean
 }
-export interface Folder {
-  id: string
+export interface DocumentTree {
+  id: number
+  key: string
   title: string
-  type: 'folder'
-  children: (CustomDocument | Folder)[]
-}
-export interface ApiResponse<T> {
-  status: number
-  message: string
-  data?: T | null
+  type: 'folder' | 'document',
+  parent_folder_id?: number | null,
+  folder_id?: number | null,
+  children?: DocumentTree[]
+  content?: string
+  author?: string
+  author_id?: number
+  createdAt?: Date
+  updatedAt?: Date
+  size?: string
 }
 export const useDocumentStore = defineStore('document', () => {
   // 状态
-  const currentDocument = ref<CustomDocument | null>(null)
-  const documentTree = ref<(CustomDocument | Folder)[]>([])
-  const recentDocuments = ref<CustomDocument[]>([])
+  const currentDocument = ref<Document | null>(null)
+  const documentTree = ref<DocumentTree[]>([])
+  const recentDocuments = ref<Document[]>([])
   const onlineUsers = ref<User[]>([])
   const isLoading = ref(false)
-  // TODO:获取用户ID
-  const userId = "1"
+  // TODO
+  const userStore=useAuthStore()
+  const userId =Number(userStore.user?.id)
+
   // Getters
   const allDocuments = computed(() => {
-    const docs: CustomDocument[] = []
-    const extractDocs = (items: (CustomDocument | Folder)[]) => {
+    const docs: Document[] = []
+    const extractDocs = (items: DocumentTree[]) => {
       items.forEach(item => {
         if (item.type === 'document') {
-          docs.push(item as CustomDocument)
+          docs.push(item as Document)
         } else if (item.type === 'folder') {
           extractDocs((item as Folder).children)
         }
@@ -49,93 +72,51 @@ export const useDocumentStore = defineStore('document', () => {
     extractDocs(documentTree.value)
     return docs
   })
-
+  const myDocuments = computed(() => {
+    const docs: Document[] = []
+    const extractMyDocs = (items: DocumentTree[]) => {
+      items.forEach(item => {
+        if (item.type === 'document' && item.author_id === userId) {
+          docs.push(item as Document)
+        } else if (item.type === 'folder') {
+          extractMyDocs((item as Folder).children)
+        }
+      })
+    }
+    extractMyDocs(documentTree.value)
+    return docs
+  })
   // Actions
-  const loadDocumentTree = async (): Promise<(CustomDocument | Folder)[]> => {
-
+  const loadDocumentTree = async () => {
     isLoading.value = true
     try {
       // 从API加载文档树
-      const response = await $fetch<ApiResponse<(CustomDocument | Folder)[]>>('/api/documentTree', {
-        "method": "GET",
-        "query": {
-          "userId": userId
-        }
-      })
-      if (response?.status === 200 && response.data) {
-        const convertTree = (items: (CustomDocument | Folder)[]): (CustomDocument | Folder)[] => {
-          return items.map(item => {
-            if (item.type === 'document') {
-              return {
-                ...item,
-                createdAt: new Date(item.createdAt),
-                updatedAt: new Date(item.updatedAt)
-              }
-            } else if ('children' in item && Array.isArray(item.children)) {
-              return {
-                ...item,
-                children: convertTree(item.children)
-              }
-            } else {
-              return item
-            }
-          })
-        }
-  
-        documentTree.value = convertTree(response.data)
-
-        return documentTree.value
+      const documentTreeResp = await getDocumentTreeAPI(userId)
+      if (documentTreeResp.status === 200) {
+        documentTree.value = documentTreeResp.data
       }
-      return []
-    } catch  {
-      console.log('加载文档树失败')
-      return []
+      console.log("文档树：", documentTreeResp)
+    } catch (error) {
+      console.error('加载文档树失败:', error)
     } finally {
       isLoading.value = false
     }
   }
 
-  const loadRecentDocuments = async (): Promise<CustomDocument[]> => {
-    try {
-      // 从API加载最近访问的文档
-      const response = await $fetch<ApiResponse<CustomDocument[]>>('/api/recentDocuments', {
-        "method": "GET",
-        "query": {
-          "userId": userId
-        }
-      })
-      console.log(response)
-
-      if (response?.status === 200 && response.data) {
-
-        recentDocuments.value = response.data.map(doc => ({
-          ...doc,
-          // 将字符串转换为 Date 对象
-          createdAt: new Date(doc.createdAt),
-          updatedAt: new Date(doc.updatedAt)
-        }));
-      }
-
-
-      return recentDocuments.value.length > 0 ? recentDocuments.value : [];
-    } catch (error) {
-      console.error('加载最近文档失败:', error)
-      return []
+  const loadRecentDocuments = async () => {
+    const recentDocumentsResp = await recentDocumentsAPI(userId)
+    if (recentDocumentsResp.status === 200) {
+      recentDocuments.value = recentDocumentsResp.data
     }
   }
 
-  const loadDocument = async (documentId: string): Promise<CustomDocument | null> => {
+  const loadDocument = async (documentId: number): Promise<Document | null> => {
     isLoading.value = true
     try {
       // 从API加载具体文档
-      const document = await $fetch<ApiResponse<CustomDocument>>('/api/document', {
-        "method": "GET",
-        "query": {
-          "documentId": documentId
-        }
-      })
-      if (document?.status === 200 && document.data) {
-        currentDocument.value = document.data
+      const documentResp = await getDocumentDetailAPI(documentId)
+      if (documentResp.status === 200) {
+        currentDocument.value = documentResp.data
         return currentDocument.value
       }
       return null
@@ -147,74 +128,122 @@ export const useDocumentStore = defineStore('document', () => {
     }
   }
 
-  const createDocument = async (title: string, folderId?: string): Promise<ApiResponse<CustomDocument|undefined>> => {
+  const createDocument = async (title: string, folderId?: number | null): Promise<Document> => {
+    const newDocumentTemp: Partial<Document> = {
+      title: title || "",
+      content: '',
+      author_id: userId,
+      folder_id: folderId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
     // 调用API创建文档
-    const response = await $fetch<ApiResponse<CustomDocument>>('/api/document', {
-      method: 'POST',
-      body: {
-        title,
-        folderId,
-        userId: userId, 
-      }
+    const res = await createDocumentAPI(newDocumentTemp as {
+      title: string
+      content: string
+      author_id: number
+      folder_id: number | null
+      createdAt: Date
+      updatedAt: Date
     })
-    return response
+    const newDocument = res.data
+    currentDocument.value = res.data
+    console.log(res)
+    // 模拟添加到本地状态
+    if (folderId) {
+      // 添加到指定文件夹
+      const addToFolder = (items: DocumentTree[]) => {
+        items.forEach(item => {
+          if (item.type === 'folder' && item.id === folderId) {
+            ; (item as Folder).children.push(newDocument)
+          } else if (item.type === 'folder') {
+            addToFolder((item as Folder).children)
+          }
+        })
+      }
+      addToFolder(documentTree.value)
+    } else {
+      // 添加到根目录
+      documentTree.value.push(newDocument)
+    }
+
+    return newDocument
   }
 
-  const updateDocument = async (
-    documentId: string,
-    updates: Partial<CustomDocument>
-  ): Promise<ApiResponse<CustomDocument> | undefined> => {
+  const updateDocument = async (documentId: number, updates: Partial<Document>) => {
     try {
-        const response = await $fetch<ApiResponse<CustomDocument>>('/api/document', {
-          method: 'PUT',
-          query: { documentId },
-          body: { updatedData: updates }
+      console.log("更新文档",documentId,updates)
+      if(currentDocument.value&&currentDocument.value.id === documentId){
+        Object.assign(currentDocument.value, {
+          ...updates,
+          updatedAt: new Date()
         })
-        return response
+      }
+      // 调用API更新文档
+        const updatedData = {
+          ...updates,
+          ...(updates.content ? { updatedAt: new Date() } : {})
+        }
+        await updateDocumentAPI(
+          documentId,
+          updatedData
+        )
+      
     } catch (error) {
       console.error('更新文档失败:', error)
-      return {
-        status: 500,
-        message: '更新文档失败',
-      }
     }
   }
 
-
-  const deleteDocument = async (documentId: string): Promise<ApiResponse<CustomDocument | undefined>> => {
+  const deleteDocument = async (documentId: number) => {
     try {
-      // TODO: 调用API删除文档
-      const response = await $fetch<ApiResponse<CustomDocument>>('/api/document', {
-        method: 'DELETE',
-        query: {
-          documentId: documentId
-        }
-      })
-      return response
+      // 删除树中文档
+      const removeFromTree = (items: DocumentTree[]) => {
+        return items.filter(item => {
+          if (item.type==='document'&&item.id === documentId) {
+            return false
+          }
+          if (item.type === 'folder') {
+            item.children = removeFromTree((item as Folder).children)
+          }
+          return true
+        })
+      }
+      // 从数据库删除
+      const res = await deleteDocumentAPI(documentId)
+      if (res.status === 200) {
+        // 从树中移除
+        documentTree.value = removeFromTree(documentTree.value)
+        await loadRecentDocuments()
+        Message.success('文档已删除')
+        console.log("删除文档后的最近文档：", recentDocuments)
+      }
     } catch (error) {
       console.error('删除文档失败:', error)
-      return {
-        status: 500,
-        message: "删除文档失败"
-      }
     }
   }
+  const moveDocument = async (documentId: number, targetFolderId: number | null) => {
+    const result = await moveDocumentAPI(documentId, targetFolderId)
+    if (result.status === 200) {
+      await loadDocumentTree()
+      Message.success("文件移动成功")
 
+    }
+  }
   const updateOnlineUsers = (users: User[]) => {
     onlineUsers.value = users
   }
 
   return {
     // State
-    currentDocument: currentDocument,
-    documentTree: documentTree,
-    recentDocuments: recentDocuments,
-    onlineUsers: onlineUsers,
-    isLoading: isLoading,
+    currentDocument,
+    documentTree,
+    recentDocuments,
+    onlineUsers,
+    isLoading,
 
     // Getters
     allDocuments,
-
+    myDocuments,
     // Actions
     loadDocumentTree,
     loadRecentDocuments,
@@ -222,6 +251,7 @@ export const useDocumentStore = defineStore('document', () => {
     createDocument,
     updateDocument,
     deleteDocument,
-    updateOnlineUsers
+    updateOnlineUsers,
+    moveDocument
   }
 })

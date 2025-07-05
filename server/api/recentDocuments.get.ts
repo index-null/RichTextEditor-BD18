@@ -1,54 +1,53 @@
 import { defineEventHandler, getQuery } from 'h3'
-import { promises as fs } from 'fs'
-import path from 'path'
+import pool from '../utils/db'
+
+function isNewDocument(updatedAt: Date): boolean {
+  const now = new Date()
+  const diffTime = now.getTime() - updatedAt.getTime()
+  const diffDays = diffTime / (1000 * 60 * 60 * 24)
+  return diffDays <= 7
+}
 
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
-    const userId = query.userId as string || '0'
-    const userIdNum = parseInt(userId, 10)
+    const userId = query.userId
 
-    // 读取 mockData.json 文件
-    const filePath = path.resolve(process.cwd(), 'database/mockData.json')
-    const fileContent = await fs.readFile(filePath, 'utf-8')
-    const mock_data = JSON.parse(fileContent)
-
-    const { users, documents } = mock_data
-    const userMap = new Map(users.map((user: any) => [user.id, user.nickname]))
-    const currentUser = users.find((u: any) => u.id === userIdNum)
-
-    if (!currentUser) {
-      throw new Error('用户不存在')
+    if (!userId) {
+      return {
+        status: 400,
+        message: '缺少用户ID参数'
+      }
     }
 
-    const groupUserIds = users
-      .filter((u: any) => u.user_group === currentUser.user_group)
-      .map((u: any) => u.id)
+    const sql = `
+      SELECT d.id, d.title, d.updated_at, u.nickname AS author
+      FROM documents d
+      JOIN users u ON d.author_id = u.id
+      WHERE d.author_id = $1
+      ORDER BY d.updated_at DESC
+      LIMIT 20
+    `
+    const result = await pool.query(sql, [userId])
 
-    const recentDocuments = documents
-      .filter((doc: any) => groupUserIds.includes(doc.author_id))
-      .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-      .slice(0, 5)
-      .map((doc: any) => ({
-        id: doc.id.toString(),
-        title: doc.title,
-        content: doc.content,
-        author: userMap.get(doc.author_id) || '未知作者',
-        createdAt: new Date(doc.created_at),
-        updatedAt: new Date(doc.updated_at),
-        type: 'document'
-      }))
+    const documents = result.rows.map(row => ({
+      id: row.id.toString(),
+      title: row.title,
+      updatedAt: row.updated_at,
+      author: row.author || '未知',
+      isNew: isNewDocument(new Date(row.updated_at))
+    }))
 
     return {
       status: 200,
-      message: '获取最近访问文档成功',
-      data: recentDocuments
+      message: '最近文档获取成功',
+      data: documents
     }
-  } catch (error) {
+
+  } catch  {
     return {
       status: 500,
-      message: '获取最近访问文档失败',
-      error: (error as Error).message
+      message: '服务器内部错误'
     }
   }
 })
