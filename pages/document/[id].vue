@@ -24,23 +24,18 @@
           <!-- 格式工具组 -->
           <div class="toolbar-group">
             <ATooltip content="撤销 (Ctrl+Z)">
-              <AButton
-                size="small"
-                type="text"
-                @click="editor?.chain().focus().undo().run()"
-              >
-                <template #icon><Icon name="ri:arrow-go-back-line" /></template>
+              <AButton size="small" type="text" @click="editor?.chain().focus().undo().run()">
+                <template #icon>
+                  <Icon name="ri:arrow-go-back-line" />
+                </template>
               </AButton>
             </ATooltip>
             <ATooltip content="重做 (Ctrl+Y)">
-              <AButton
-                size="small"
-                type="text"
-                @click="editor?.chain().focus().redo().run()"
-              >
-                <template #icon
-                  ><Icon name="ri:arrow-go-forward-line"
-                /></template>
+
+              <AButton size="small" type="text" @click="editor?.chain().focus().redo().run()">
+                <template #icon>
+                  <Icon name="ri:arrow-go-forward-line" />
+                </template>
               </AButton>
             </ATooltip>
           </div>
@@ -88,30 +83,27 @@
           <!-- 列表工具组 -->
           <div class="toolbar-group">
             <ATooltip content="无序列表">
-              <AButton
-                size="small"
-                :type="isBulletList ? 'primary' : 'text'"
-                @click="toggleBulletList"
-              >
-                <template #icon><Icon name="ri:list-unordered" /></template>
+
+              <AButton size="small" :type="isBulletList ? 'primary' : 'text'" @click="toggleBulletList">
+                <template #icon>
+                  <Icon name="ri:list-unordered" />
+                </template>
               </AButton>
             </ATooltip>
             <ATooltip content="有序列表">
-              <AButton
-                size="small"
-                :type="isOrderedList ? 'primary' : 'text'"
-                @click="toggleOrderedList"
-              >
-                <template #icon><Icon name="ri:list-ordered" /></template>
+
+              <AButton size="small" :type="isOrderedList ? 'primary' : 'text'" @click="toggleOrderedList">
+                <template #icon>
+                  <Icon name="ri:list-ordered" />
+                </template>
               </AButton>
             </ATooltip>
             <ATooltip content="任务列表">
-              <AButton
-                size="small"
-                :type="isTaskList ? 'primary' : 'text'"
-                @click="toggleTaskList"
-              >
-                <template #icon><Icon name="ri:checkbox-line" /></template>
+
+              <AButton size="small" :type="isTaskList ? 'primary' : 'text'" @click="toggleTaskList">
+                <template #icon>
+                  <Icon name="ri:checkbox-line" />
+                </template>
               </AButton>
             </ATooltip>
           </div>
@@ -122,7 +114,9 @@
           <div class="toolbar-group">
             <ADropdown trigger="click">
               <AButton size="small" type="text">
-                <template #icon><Icon name="ri:align-left" /></template>
+                <template #icon>
+                  <Icon name="ri:align-left" />
+                </template>
                 <Icon name="ri:arrow-down-s-line" />
               </AButton>
               <template #content>
@@ -147,31 +141,33 @@
           <!-- 插入工具组 -->
           <div class="toolbar-group">
             <ATooltip content="引用">
-              <AButton
-                size="small"
-                :type="isBlockquote ? 'primary' : 'text'"
-                @click="toggleBlockquote"
-              >
-                <template #icon><Icon name="ri:double-quotes-l" /></template>
+
+              <AButton size="small" :type="isBlockquote ? 'primary' : 'text'" @click="toggleBlockquote">
+                <template #icon>
+                  <Icon name="ri:double-quotes-l" />
+                </template>
               </AButton>
             </ATooltip>
             <ATooltip content="代码块">
-              <AButton
-                size="small"
-                :type="isCodeBlock ? 'primary' : 'text'"
-                @click="toggleCodeBlock"
-              >
-                <template #icon><Icon name="ri:code-box-line" /></template>
+
+              <AButton size="small" :type="isCodeBlock ? 'primary' : 'text'" @click="toggleCodeBlock">
+                <template #icon>
+                  <Icon name="ri:code-box-line" />
+                </template>
               </AButton>
             </ATooltip>
             <ATooltip content="分割线">
               <AButton size="small" type="text" @click="setHorizontalRule">
-                <template #icon><Icon name="ri:separator" /></template>
+                <template #icon>
+                  <Icon name="ri:separator" />
+                </template>
               </AButton>
             </ATooltip>
             <ADropdown trigger="click">
               <AButton size="small" type="text">
-                <template #icon><Icon name="ri:add-line" /></template>
+                <template #icon>
+                  <Icon name="ri:add-line" />
+                </template>
               </AButton>
               <template #content>
                 <ADoption @click="insertImage">
@@ -193,33 +189,21 @@
       <div class="header-right">
         <!-- 连接状态 -->
         <div class="connection-status">
-          <Icon
-            v-if="connectionStatus === 'connected'"
-            name="ri:wifi-line"
-            class="status-icon connected"
-          />
-          <Icon
-            v-else-if="connectionStatus === 'connecting'"
-            name="ri:loader-4-line"
-            class="status-icon connecting"
-          />
-          <Icon
-            v-else
-            name="ri:wifi-off-line"
-            class="status-icon disconnected"
-          />
+          <Icon v-if="connectionStatus === 'connected'" name="ri:wifi-line" class="status-icon connected" />
+          <Icon v-else-if="connectionStatus === 'connecting'" name="ri:loader-4-line" class="status-icon connecting" />
+          <Icon v-else name="ri:wifi-off-line" class="status-icon disconnected" />
+          <Icon v-if="connectionStatus === 'connected'" name="ri:wifi-line" class="status-icon connected" />
+          <Icon v-else-if="connectionStatus === 'connecting'" name="ri:loader-4-line" class="status-icon connecting" />
+          <Icon v-else name="ri:wifi-off-line" class="status-icon disconnected" />
           <span class="status-text">{{ connectionStatusText }}</span>
         </div>
 
         <!-- 协作用户 -->
         <div class="collaboration-users">
           <AvatarGroup :max-count="3">
-            <AAvatar
-              v-for="user in onlineUsers"
-              :key="user.clientId"
-              :size="32"
-              :style="{ backgroundColor: user.color }"
-            >
+
+            <AAvatar v-for="user in onlineUsers" :key="user.clientId" :size="32"
+              :style="{ backgroundColor: user.color }">
               {{ user.name[0] }}
             </AAvatar>
           </AvatarGroup>
@@ -228,7 +212,9 @@
         <!-- 更多操作 -->
         <ADropdown trigger="click">
           <AButton type="text">
-            <template #icon><Icon name="ri:more-2-fill" /></template>
+            <template #icon>
+              <Icon name="ri:more-2-fill" />
+            </template>
           </AButton>
           <template #content>
             <ADoption @click="showDocumentInfo">
@@ -254,20 +240,25 @@
 
     <!-- 文档标题区域 -->
     <div class="document-header">
-      <AInput
-        v-model="documentTitle"
-        class="document-title-input"
-        placeholder="无标题文档"
-        :bordered="false"
-        @blur="saveTitle"
-        @keydown.enter="$event.currentTarget.blur()"
-      />
+      <AInput v-model="documentTitle" class="document-title-input" placeholder="无标题文档" :bordered="false"
+        @blur="saveTitle" @keydown.enter="$event.currentTarget.blur()" />
       <div class="document-meta">
-        <span><Icon name="ri:time-line" /> 最后编辑于 {{ lastEditTime }}</span>
-        <span><Icon name="ri:file-text-line" /> {{ wordCount }} 字</span>
-        <span
-          ><Icon name="ri:timer-line" /> 阅读时长约 {{ readingTime }} 分钟</span
-        >
+       
+          <span>
+            <Icon name="ri:time-line" />
+            最后编辑于
+            <ASpin v-if="editTimeLoading&&!lastEditTime" size="small" style="margin-left: 6px;" />
+            <template v-else>
+              {{ lastEditTime }}
+            </template>
+          </span>
+        <span>
+          <Icon name="ri:file-text-line" /> {{ wordCount }} 字
+        </span>
+        <span>
+          <Icon name="ri:timer-line" /> 阅读时长约 {{ readingTime }} 分钟
+        </span>
+
       </div>
     </div>
 
@@ -277,21 +268,19 @@
       <div class="editor-container">
         <div class="editor-wrapper">
           <EditorContent :editor="editor" class="editor-content" />
+
         </div>
 
+
+        <!-- 侧边栏 -->
         <!-- 侧边栏 -->
         <div v-if="showSidebar" class="editor-sidebar">
           <ATabs v-model:active-key="sidebarTab">
             <ATabPane key="outline" title="大纲">
               <div class="outline-content">
                 <div v-if="documentOutline.length > 0">
-                  <div
-                    v-for="item in documentOutline"
-                    :key="item.id"
-                    class="outline-item"
-                    :class="`outline-level-${item.level}`"
-                    @click="scrollToHeading(item.id)"
-                  >
+                  <div v-for="item in documentOutline" :key="item.id" class="outline-item"
+                    :class="`outline-level-${item.level}`" @click="scrollToHeading(item.id)">
                     {{ item.text }}
                   </div>
                 </div>
@@ -344,10 +333,11 @@ import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { useTiptapToolbar } from "~/composables/useTiptapToolbar";
 import { Message, AvatarGroup } from "@arco-design/web-vue";
+import { useDebounceFn } from '@vueuse/core'
 
 // 获取路由参数
-const route = useRoute();
-const documentId = route.params.id as string;
+const route = useRoute()
+const documentId = route.params.id
 
 // Yjs 相关
 const ydoc = new Y.Doc();
@@ -358,7 +348,7 @@ const documentTitle = ref("无标题文档");
 const editor = shallowRef<Editor | undefined>(undefined);
 const showSidebar = ref(true);
 const sidebarTab = ref("outline");
-const lastEditTime = ref("刚刚");
+const lastEditTime = ref("")
 const wordCount = ref(0);
 const readingTime = ref(0);
 const currentLine = ref(1);
@@ -415,16 +405,16 @@ const {
 // 计算属性
 const connectionStatusText = computed(() => {
   switch (connectionStatus.value) {
-    case "connected":
-      return "已连接";
-    case "connecting":
-      return "连接中...";
-    case "disconnected":
-      return "连接断开";
+    case 'connected':
+      return '已连接'
+    case 'connecting':
+      return '连接中...'
+    case 'disconnected':
+      return '连接断开'
     default:
-      return "";
+      return ''
   }
-});
+})
 
 const currentHeadingText = computed(() => {
   if (!editor.value) return "正文";
@@ -500,10 +490,11 @@ const initCollaboration = () => {
   provider.awareness.setLocalStateField("user", userInfo);
 };
 
+
 // 初始化编辑器
 onMounted(() => {
   // 先初始化协同编辑
-  initCollaboration();
+  initCollaboration()
 
   editor.value = new Editor({
     extensions: [
@@ -550,12 +541,13 @@ onMounted(() => {
       },
     },
     onUpdate: ({ editor: _editor }) => {
-      updateDocumentStats();
-      lastEditTime.value = "刚刚";
+      updateDocumentStats()
+      debouncedSaveDocument()  // 自动保存，防抖处理
+
     },
     onSelectionUpdate: ({ editor: _editor }) => {
       // 更新光标位置
-      const { from } = _editor.state.selection;
+      const { from } = _editor.state.selection
       // 简化的行列计算
       currentLine.value = Math.floor(from / 50) + 1;
       currentColumn.value = (from % 50) + 1;
@@ -589,8 +581,8 @@ onMounted(() => {
           }
         }, 1000);
       }
-    },
-  });
+    }
+  })
 
   // 初始更新统计
   updateDocumentStats();
@@ -604,12 +596,16 @@ onBeforeUnmount(() => {
   if (provider) {
     provider.destroy();
   }
-});
+})
 
 // 事件处理函数
-const saveTitle = () => {
-  console.log("保存标题:", documentTitle.value);
-};
+const saveTitle = async () => {
+  console.log('保存标题:', documentTitle.value)
+  if (documentId === 'new') return
+  await documentStore.updateDocument(Number(documentId), {
+    title: documentTitle.value,
+  })
+}
 
 const toggleSidebar = () => {
   showSidebar.value = !showSidebar.value;
@@ -621,20 +617,20 @@ const scrollToHeading = (id: string) => {
 };
 
 const showDocumentInfo = () => {
-  Message.info("文档信息功能开发中...");
-};
+  Message.info('文档信息功能开发中...')
+}
 
 const showHistory = () => {
-  Message.info("历史版本功能开发中...");
-};
+  Message.info('历史版本功能开发中...')
+}
 
 const exportDocument = () => {
-  Message.info("导出功能开发中...");
-};
+  Message.info('导出功能开发中...')
+}
 
 const printDocument = () => {
-  window.print();
-};
+  window.print()
+}
 
 const shareDocument = () => {
   Message.success("分享链接已复制到剪贴板");
@@ -653,16 +649,54 @@ const insertLink = () => {
   if (url) {
     editor.value?.chain().focus().setLink({ href: url }).run();
   }
-};
-
+}
+const documentStore = useDocumentStore()
 // 加载文档数据
+const editTimeLoading = ref(true)
 const loadDocument = async () => {
-  if (documentId === "new") {
-    documentTitle.value = "新建文档";
+  if (documentId === 'new') {
+    documentTitle.value = '新建文档'
   } else {
-    documentTitle.value = `文档 ${documentId}`;
+    const id = Number(documentId)
+    await documentStore.loadDocument(id)
+    nextTick(() => {
+      const doc = documentStore.currentDocument
+      if (doc) {
+        documentTitle.value = doc.title || `文档 ${id}`
+
+        const updated = doc.updatedAt && !isNaN(new Date(doc.updatedAt).getTime())
+          ? new Date(doc.updatedAt).toLocaleString()
+          : ''
+
+        lastEditTime.value = updated
+        editor.value?.chain().setContent(doc.content || '').run()
+        wordCount.value = doc.content.length
+
+      }
+      editTimeLoading.value = false
+    })
   }
-};
+}
+// 保存文档内容
+const saveDocument = async () => {
+  editTimeLoading.value = true
+  if (!editor.value || !documentStore.currentDocument || documentId === 'new') return
+
+  const content = editor.value.getHTML()
+  const id = Number(documentId)
+  const updates = {
+    content,
+  }
+  await documentStore.updateDocument(id, updates)
+  setTimeout(() => {
+  lastEditTime.value = new Date().toLocaleString()
+    editTimeLoading.value = false
+  }, 300)
+}
+
+// 防抖包装（3秒内多次调用，只执行最后一次）
+const debouncedSaveDocument = useDebounceFn(saveDocument, 3000)
+
 
 // 页面初始化
 onMounted(() => {
@@ -671,21 +705,17 @@ onMounted(() => {
 
 // 监听快捷键
 onMounted(() => {
+  // 监听快捷键ctrl+s
   const handleKeydown = (e: KeyboardEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      if (e.key === "s") {
-        e.preventDefault();
-        Message.success("文档已自动保存");
-      }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault()
+      saveDocument() // 立即保存，不防抖
+      Message.success("保存成功")
     }
-  };
-
-  document.addEventListener("keydown", handleKeydown);
-
-  onBeforeUnmount(() => {
-    document.removeEventListener("keydown", handleKeydown);
-  });
-});
+  }
+  document.addEventListener('keydown', handleKeydown)
+  onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
+})
 </script>
 
 <style scoped>
@@ -758,9 +788,11 @@ onMounted(() => {
 .format-option h1 {
   font-size: 20px;
 }
+
 .format-option h2 {
   font-size: 18px;
 }
+
 .format-option h3 {
   font-size: 16px;
 }
@@ -806,6 +838,7 @@ onMounted(() => {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -898,9 +931,11 @@ onMounted(() => {
 .editor-content :deep(h1) {
   font-size: 2em;
 }
+
 .editor-content :deep(h2) {
   font-size: 1.5em;
 }
+
 .editor-content :deep(h3) {
   font-size: 1.25em;
 }
@@ -955,7 +990,7 @@ onMounted(() => {
   background: var(--color-fill-2);
   padding: 0.2em 0.4em;
   border-radius: 4px;
-  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.9em;
 }
 
@@ -1085,6 +1120,7 @@ onMounted(() => {
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
   }
 
+
   .header-center {
     display: none;
   }
@@ -1095,10 +1131,12 @@ onMounted(() => {
     font-size: 24px;
   }
 
+
   .document-meta {
     flex-wrap: wrap;
     gap: 12px;
   }
+
 
   .editor-wrapper {
     padding: 16px;
@@ -1106,11 +1144,11 @@ onMounted(() => {
 }
 
 /* 暗黑模式适配 */
-body[arco-theme="dark"] .editor-content :deep(pre) {
+body[arco-theme='dark'] .editor-content :deep(pre) {
   background: var(--color-fill-3);
 }
 
-body[arco-theme="dark"] .editor-content :deep(code) {
+body[arco-theme='dark'] .editor-content :deep(code) {
   background: var(--color-fill-3);
 }
 </style>

@@ -29,15 +29,15 @@
         </AButton>
         <template #content>
           <div class="color-grid">
-            <ADGrid :cols="5" :col-gap="4" :row-gap="4">
-              <ADGridItem
+            <AGrid :cols="5" :col-gap="4" :row-gap="4">
+              <AGridItem
                 v-for="color in commonColors"
                 :key="color"
                 class="color-swatch"
                 :style="{ backgroundColor: color }"
                 @click="setColor(color)"
               />
-            </ADGrid>
+            </AGrid>
             <AButton type="text" size="mini" style="margin-top: 8px;" @click="unsetColor">
               清除颜色
             </AButton>
