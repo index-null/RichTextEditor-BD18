@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
       id: row.id,
       title: row.title,
       key:`doc_${row.id}`,
-      content: row.content,
+      // content: row.content,
       author: row.author,
       author_id: row.author_id,
       createdAt: new Date(row.created_at),
@@ -83,6 +83,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // 构建嵌套文件夹结构
+    // const topLevelFolders: { id: number; key: string; title: string; type: string; parent_folder_id: number | null; children: any[] }[] = []
     const topLevelFolders: any[] = []
     folders.forEach(folder => {
       const current = folderMap.get(folder.id)

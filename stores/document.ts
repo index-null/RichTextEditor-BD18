@@ -1,6 +1,7 @@
 import { Message } from "@arco-design/web-vue"
-import { recentDocumentsAPI, getDocumentTreeAPI, deleteDocumentAPI, createDocumentAPI, updateDocumentAPI, getDocumentDetailAPI, moveDocumentAPI } from "~/apis/document"
+import { recentDocumentsAPI, getDocumentTreeAPI, deleteDocumentAPI, createDocumentAPI, updateDocumentAPI, getDocumentDetailAPI, moveDocumentAPI } from "~/api/document"
 
+import { useAuthStore } from "~/stores/auth"
 export interface Document {
   id: number
   title: string
@@ -38,11 +39,9 @@ export interface DocumentTree {
   parent_folder_id?: number | null,
   folder_id?: number | null,
   children?: DocumentTree[]
- 
   content?: string
   author?: string
   author_id?: number
-  
   createdAt?: Date
   updatedAt?: Date
   size?: string
@@ -55,7 +54,8 @@ export const useDocumentStore = defineStore('document', () => {
   const onlineUsers = ref<User[]>([])
   const isLoading = ref(false)
   // TODO
-  const userId = ref(1)
+  const userStore=useAuthStore()
+  const userId =Number(userStore.user?.id)
 
   // Getters
   const allDocuments = computed(() => {
@@ -76,7 +76,7 @@ export const useDocumentStore = defineStore('document', () => {
     const docs: Document[] = []
     const extractMyDocs = (items: DocumentTree[]) => {
       items.forEach(item => {
-        if (item.type === 'document' && item.author_id === userId.value) {
+        if (item.type === 'document' && item.author_id === userId) {
           docs.push(item as Document)
         } else if (item.type === 'folder') {
           extractMyDocs((item as Folder).children)
@@ -91,7 +91,7 @@ export const useDocumentStore = defineStore('document', () => {
     isLoading.value = true
     try {
       // 从API加载文档树
-      const documentTreeResp = await getDocumentTreeAPI(userId.value)
+      const documentTreeResp = await getDocumentTreeAPI(userId)
       if (documentTreeResp.status === 200) {
         documentTree.value = documentTreeResp.data
       }
@@ -104,7 +104,7 @@ export const useDocumentStore = defineStore('document', () => {
   }
 
   const loadRecentDocuments = async () => {
-    const recentDocumentsResp = await recentDocumentsAPI(userId.value)
+    const recentDocumentsResp = await recentDocumentsAPI(userId)
     if (recentDocumentsResp.status === 200) {
       recentDocuments.value = recentDocumentsResp.data
     }
@@ -132,7 +132,7 @@ export const useDocumentStore = defineStore('document', () => {
     const newDocumentTemp: Partial<Document> = {
       title: title || "",
       content: '',
-      author_id: userId.value,
+      author_id: userId,
       folder_id: folderId,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -172,12 +172,9 @@ export const useDocumentStore = defineStore('document', () => {
 
   const updateDocument = async (documentId: number, updates: Partial<Document>) => {
     try {
+      console.log("更新文档",documentId,updates)
+
       // 调用API更新文档
-      if (currentDocument.value && currentDocument.value.id === documentId) {
-        Object.assign(currentDocument.value, {
-          ...updates,
-          ...(updates.content ? { updatedAt: new Date() } : {})
-        })
         const updatedData = {
           ...updates,
           ...(updates.content ? { updatedAt: new Date() } : {})
@@ -186,7 +183,7 @@ export const useDocumentStore = defineStore('document', () => {
           documentId,
           updatedData
         )
-      }
+      
     } catch (error) {
       console.error('更新文档失败:', error)
     }

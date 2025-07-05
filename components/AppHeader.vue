@@ -11,7 +11,11 @@
 
       <!-- 中间导航 -->
       <div class="header-center">
-        <AMenu mode="horizontal" :selected-keys="[currentRoute]" @menu-item-click="handleMenuClick">
+        <AMenu
+          mode="horizontal"
+          :selected-keys="[currentRoute]"
+          @menu-item-click="handleMenuClick"
+        >
           <AMenuItem key="/">
             <template #icon><Icon name="ri:home-line" /></template>
             工作台
@@ -55,10 +59,20 @@
         </ATooltip>
 
         <!-- 用户信息 -->
-        <ADropdown trigger="click">
-          <AAvatar :size="32" class="user-avatar">
-            <Icon name="ri:user-line" />
-          </AAvatar>
+        <ADropdown v-if="authStore.isAuthenticated" trigger="click">
+          <div class="user-info">
+            <AAvatar :size="32" class="user-avatar">
+              <Icon name="ri:user-line" />
+            </AAvatar>
+            <div class="user-details">
+              <div class="user-name">
+                {{ authStore.user?.nickname || authStore.user?.username }}
+              </div>
+              <div class="user-group">
+                {{ authStore.getUserGroupLabel(authStore.userGroup) }}
+              </div>
+            </div>
+          </div>
           <template #content>
             <ADoption>
               <template #icon><Icon name="ri:user-settings-line" /></template>
@@ -69,27 +83,45 @@
               帮助中心
             </ADoption>
             <ADivider style="margin: 4px 0" />
-            <ADoption>
+            <ADoption @click="handleLogout">
               <template #icon><Icon name="ri:logout-box-line" /></template>
               退出登录
             </ADoption>
           </template>
         </ADropdown>
+
+        <!-- 未登录状态 -->
+        <div v-else class="auth-actions">
+          <AButton type="text" @click="router.push('/auth/login')">
+            登录
+          </AButton>
+          <AButton type="primary" @click="router.push('/auth/register')">
+            注册
+          </AButton>
+        </div>
       </div>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-const route = useRoute()
-const router = useRouter()
-const { isDark, toggleTheme } = useTheme()
+import { useAuthStore } from "@/stores/auth";
 
-const currentRoute = computed(() => route.path)
+const route = useRoute();
+const router = useRouter();
+const { isDark, toggleTheme } = useTheme();
+const authStore = useAuthStore();
+
+const currentRoute = computed(() => route.path);
 
 const handleMenuClick = (key: string) => {
-  router.push(key)
-}
+  router.push(key);
+};
+
+const handleLogout = () => {
+  authStore.logout();
+  router.push("/auth/login");
+};
 </script>
 
 <style scoped>
@@ -126,7 +158,11 @@ const handleMenuClick = (key: string) => {
 }
 
 .app-title {
-  background: linear-gradient(120deg, rgb(var(--primary-6)) 0%, rgb(var(--primary-5)) 100%);
+  background: linear-gradient(
+    120deg,
+    rgb(var(--primary-6)) 0%,
+    rgb(var(--primary-5)) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -148,12 +184,46 @@ const handleMenuClick = (key: string) => {
   gap: 8px;
 }
 
-.user-avatar {
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
   transition: all 0.2s;
 }
 
-.user-avatar:hover {
-  transform: scale(1.05);
+.user-info:hover {
+  background: var(--color-fill-2);
 }
-</style> 
+
+.user-avatar {
+  flex-shrink: 0;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-1);
+  line-height: 1;
+}
+
+.user-group {
+  font-size: 12px;
+  color: var(--color-text-3);
+  line-height: 1;
+}
+
+.auth-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+</style>

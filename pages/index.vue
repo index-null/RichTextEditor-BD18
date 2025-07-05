@@ -9,6 +9,7 @@
         </h1>
         <p class="welcome-subtitle">今天想要创建什么样的文档？</p>
 
+
         <!-- 快速操作 -->
         <div class="quick-actions">
           <AButton type="primary" size="large" @click="createNewDocument">
@@ -31,6 +32,7 @@
           </AButton>
         </div>
       </div>
+
 
       <!-- 统计卡片 -->
       <div class="stat-cards">
@@ -79,16 +81,35 @@
               </AButton>
             </template>
 
+
             <ASpin :loading="loading" tip="加载中...">
               <ATree v-if="documentStore.documentTree.length > 0" :data="documentStore.documentTree" :draggable="true"
                 :expanded-keys="expandedKeys" @update:expanded-keys="(keys) => expandedKeys = keys"
                 @select="handleTreeSelect" @expand="handleTreeExpand" @drop="handleTreeDrop"
                 @drag-start="handleDragStart">
-                <!-- <template #title="nodeData">
+             <template #title="nodeData">
                   <div class="tree-node">
                     <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
-                    <span class="node-title">{{ nodeData.title }}</span>
-                    <div class="node-actions">
+
+                    <!-- ✅ 新建文件夹输入框 -->
+                    <template v-if="nodeData.key === 'temp_folder'">
+                      <input ref="folderInputRef" class="temp-folder-input" v-model="newFolderTitle"
+                        @blur="handleCreateConfirm" @keyup.enter="handleCreateConfirm" @keyup.esc="cancelNewFolder"
+                        placeholder="请输入文件夹名称"  />
+                    </template>
+
+                    <!-- ✅ 正在重命名的输入框 -->
+                    <template v-else-if="editingNode?.id === nodeData.id && editingNode?.type === nodeData.type">
+                      <input ref="renameInputRef" class="rename-input" v-model="renameTitle" @blur="confirmRename"
+                        @keyup.enter="confirmRename" @keyup.esc="cancelRename" placeholder="请输入新名称"  />
+                    </template>
+
+                    <!-- ✅ 默认展示 -->
+                    <template v-else>
+                      <span class="node-title">{{ nodeData.title }}</span>
+                    </template>
+
+                    <div class="node-actions" v-if="nodeData.key !== 'temp_folder'">
                       <ADropdown trigger="click" @select="(value) => handleNodeAction(value, nodeData)">
                         <Icon name="ri:more-line" class="action-icon" />
                         <template #content>
@@ -98,39 +119,7 @@
                       </ADropdown>
                     </div>
                   </div>
-                </template> -->
-                <template #title="nodeData">
-  <div class="tree-node">
-    <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
-
-    <template v-if="nodeData.key === 'temp_folder'">
-      <input
-        ref="folderInputRef"
-        class="temp-folder-input"
-        v-model="newFolderTitle"
-        @blur="handleCreateConfirm"
-        @keyup.enter="handleCreateConfirm"
-        @keyup.esc="cancelNewFolder"
-        placeholder="请输入文件夹名称"
-        autofocus
-      />
-    </template>
-    
-    <template v-else>
-      <span class="node-title">{{ nodeData.title }}</span>
-    </template>
-
-    <div class="node-actions" v-if="nodeData.key !== 'temp_folder'">
-      <ADropdown trigger="click" @select="(value) => handleNodeAction(value, nodeData)">
-        <Icon name="ri:more-line" class="action-icon" />
-        <template #content>
-          <ADoption value="rename">重命名</ADoption>
-          <ADoption value="delete">删除</ADoption>
-        </template>
-      </ADropdown>
-    </div>
-  </div>
-</template>
+                </template>
 
               </ATree>
               <AEmpty v-else description="暂无文档" />
@@ -156,6 +145,7 @@
                   </div>
                 </template>
 
+
                 <ACardMeta>
                   <template #title>
                     <div class="document-title">{{ doc.title }}</div>
@@ -171,6 +161,7 @@
                     </div>
                   </template>
                 </ACardMeta>
+
 
                 <template #actions>
                   <span>
@@ -233,11 +224,14 @@
               </template>
               <template #actions="{ record }">
                 <ASpace>
+
                   <AButton type="text" size="mini" @click="openDocument(record.id)">
                     <template #icon>
                       <Icon name="ri:edit-line" />
                     </template>
                   </AButton>
+
+
                   <AButton type="text" size="mini" @click="shareDocument(record)">
                     <template #icon>
                       <Icon name="ri:share-line" />
@@ -264,12 +258,8 @@
         <template #upload-button>
           <div class="upload-demo-draggable">
             <Icon name="ri:upload-cloud-line" :size="48" />
-            <div class="upload-text">
-              点击或拖拽文件到此处上传
-            </div>
-            <div class="upload-hint">
-              支持 .md, .txt, .docx 格式
-            </div>
+            <div class="upload-text">点击或拖拽文件到此处上传</div>
+            <div class="upload-hint">支持 .md, .txt, .docx 格式</div>
           </div>
         </template>
       </AUpload>
@@ -324,7 +314,8 @@ interface Template {
 }
 
 // 响应式数据
-const userName = ref('用户')
+const userStore = useAuthStore()
+const userName = userStore.user?.username || "用户"
 const loading = ref(false)
 const searchKeyword = ref('')
 const sortBy = ref('updatedAt')
@@ -385,65 +376,70 @@ const collaborators = ref(8)
 // 模板数据
 const templates: Template[] = [
   {
-    id: '1',
-    name: '会议纪要',
-    description: '用于记录会议内容和决议',
-    icon: 'ri:file-list-3-line'
+    id: "1",
+    name: "会议纪要",
+    description: "用于记录会议内容和决议",
+    icon: "ri:file-list-3-line",
   },
   {
-    id: '2',
-    name: '项目提案',
-    description: '项目计划和提案模板',
-    icon: 'ri:lightbulb-line'
+    id: "2",
+    name: "项目提案",
+    description: "项目计划和提案模板",
+    icon: "ri:lightbulb-line",
   },
   {
-    id: '3',
-    name: '技术文档',
-    description: '技术规范和API文档',
-    icon: 'ri:code-s-slash-line'
+    id: "3",
+    name: "技术文档",
+    description: "技术规范和API文档",
+    icon: "ri:code-s-slash-line",
   },
   {
-    id: '4',
-    name: '周报模板',
-    description: '每周工作总结模板',
-    icon: 'ri:calendar-check-line'
-  }
-]
+    id: "4",
+    name: "周报模板",
+    description: "每周工作总结模板",
+    icon: "ri:calendar-check-line",
+  },
+];
 
 // 表格列配置
 const documentColumns = [
+
   {
     title: '文档名称',
     dataIndex: 'title',
     slotName: 'name',
     ellipsis: true,
     tooltip: true,
-    width: 300
+    width: 300,
   },
   {
+
     title: '最后修改',
     dataIndex: 'updatedAt',
     slotName: 'updatedAt',
     width: 150
   },
   {
+
     title: '作者',
     dataIndex: 'author',
     ellipsis: true,
-    width: 100
+    width: 100,
   },
   {
+
     title: '大小',
     dataIndex: 'size',
     width: 80
   },
   {
+
     title: '操作',
     slotName: 'actions',
     width: 120,
-    align: 'center'
-  }
-]
+    align: "center",
+  },
+];
 
 // 计算属性
 const filteredDocuments = computed(() => {
@@ -457,14 +453,15 @@ const filteredDocuments = computed(() => {
     )
   }
 
+
   // 排序
   docs.sort((a, b) => {
-    if (sortBy.value === 'title') {
-      return a.title.localeCompare(b.title)
+    if (sortBy.value === "title") {
+      return a.title.localeCompare(b.title);
     } else {
       // 安全的日期属性访问
-      const aValue = sortBy.value === 'updatedAt' ? a.updatedAt : a.createdAt
-      const bValue = sortBy.value === 'updatedAt' ? b.updatedAt : b.createdAt
+      const aValue = sortBy.value === "updatedAt" ? a.updatedAt : a.createdAt;
+      const bValue = sortBy.value === "updatedAt" ? b.updatedAt : b.createdAt;
       // 确保日期值存在且转换为时间戳
       const aTime = aValue instanceof Date ? aValue.getTime() : aValue ? new Date(aValue).getTime() : 0
       const bTime = bValue instanceof Date ? bValue.getTime() : bValue ? new Date(bValue).getTime() : 0
@@ -479,20 +476,32 @@ const filteredDocuments = computed(() => {
 const formatDate = (date: Date | string) => {
   const d = typeof date === 'string' ? new Date(date) : date
   const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-  if (days === 0) {
-    return '今天'
-  } else if (days === 1) {
-    return '昨天'
-  } else if (days < 7) {
-    return `${days} 天前`
+  const sameDay = d.getFullYear() === now.getFullYear()
+    && d.getMonth() === now.getMonth()
+    && d.getDate() === now.getDate()
+
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  const isYesterday = d.getFullYear() === yesterday.getFullYear()
+    && d.getMonth() === yesterday.getMonth()
+    && d.getDate() === yesterday.getDate()
+
+  if (sameDay) {
+    return "今天"
+  } else if (isYesterday) {
+    return "昨天"
   } else {
-    return new Intl.DateTimeFormat('zh-CN', {
-      month: '2-digit',
-      day: '2-digit'
-    }).format(d)
+    const diff = now.getTime() - d.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    if (days < 7) {
+      return `${days} 天前`
+    } else {
+      return new Intl.DateTimeFormat('zh-CN', {
+        month: '2-digit',
+        day: '2-digit'
+      }).format(d)
+    }
   }
 }
 
@@ -515,17 +524,17 @@ const createNewDocument = async () => {
   const data = await documentStore.createDocument("新建文档", selectFolderId.value)
   navigateTo(`/document/${data.id}`)
 }
-
 const createNewFolder = () => {
   const parentId = selectFolderId.value ?? null
   newFolderNode.value = { parentId }
 
-  // ✅ 展开当前文件夹（在添加节点之前执行）
-  if (parentId !== null && !expandedKeys.value.includes(String(parentId))) {
-    expandedKeys.value.push(String(parentId))
+  // ✅ 第 1 步：展开父节点（确保更新）
+  const pidStr = "folder_"+parentId
+  if (parentId !== null && !expandedKeys.value.includes(pidStr)) {
+    expandedKeys.value = [...expandedKeys.value, pidStr] // 触发响应式
   }
 
-  // ✅ 插入临时节点
+  // ✅ 第 2 步：插入临时节点
   if (parentId === null) {
     documentStore.documentTree.unshift({
       id: -1,
@@ -548,11 +557,12 @@ const createNewFolder = () => {
     }
   }
 
-  // ✅ 等下一帧后聚焦输入框
+  // ✅ 第 3 步：聚焦输入框
   nextTick(() => {
     folderInputRef.value?.focus()
   })
 }
+
 
 const findNodeById = (nodes: DocumentTree[], id: number): DocumentTree | null => {
   for (const node of nodes) {
@@ -579,7 +589,6 @@ const handleCreateConfirm = async () => {
 
   const title = newFolderTitle.value.trim()
   const parentId = newFolderNode.value?.parentId ?? null
-
   removeTempFolderNode()
   newFolderNode.value = null
   newFolderTitle.value = ''
@@ -619,6 +628,7 @@ const handleTreeSelect = (_selectedKeys: string[], info: { selected: boolean; no
   }
   console.log('选中的节点数据:', selectedNode)
 }
+// 文档树展开状态
 const expandedKeys = ref<string[]>([])
 const handleTreeExpand = (keys: string[]) => {
   expandedKeys.value = keys
@@ -704,9 +714,9 @@ const openDocument = (documentId: number) => {
   navigateTo(`/document/${documentId}`)
 }
 
-const shareDocument = (doc: Pick<Document, 'id' | 'title'>) => {
-  Message.info(`分享文档: ${doc.title}`)
-}
+const shareDocument = (doc: Pick<Document, "id" | "title">) => {
+  Message.info(`分享文档: ${doc.title}`);
+};
 
 const deleteDocument = (documentId: number) => {
   loading.value = true
@@ -722,20 +732,66 @@ const deleteFolder = (folderId: number) => {
     await folderStore.deleteFolder(folderId)
   }, 1000)
 }
+// 重命名文档状态
+const renameTitle = ref('')
+const editingNode = ref<{ id: number; type: 'folder' | 'document' } | null>(null)
+const renameInputRef = ref<HTMLInputElement | null>(null)
+// 执行重命名
+const confirmRename = async () => {
+  const node = editingNode.value
+  if (!node || !renameTitle.value.trim()) return
+
+  const title = renameTitle.value.trim()
+  try {
+    if (node.type === 'folder') {
+      await folderStore.renameFolder(node.id, title)
+    } else {
+      await documentStore.updateDocument(node.id, { title:title })
+    }
+    // await documentStore.loadDocumentTree()
+    updateNodeTitle(node.id, node.type, title)
+  } catch (err) {
+    console.error(err)
+    Message.error('重命名失败')
+  } finally {
+    editingNode.value = null
+    renameTitle.value = ''
+  }
+}
+
+const cancelRename = () => {
+  editingNode.value = null
+  renameTitle.value = ''
+}
+const updateNodeTitle = (id: number, type: 'folder' | 'document', newTitle: string) => {
+  const findAndUpdate = (nodes: TreeNode[]) => {
+    for (const node of nodes) {
+      if (node.id === id && node.type === type) {
+        node.title = newTitle
+        return true
+      }
+      if (node.children) {
+        if (findAndUpdate(node.children)) return true
+      }
+    }
+    return false
+  }
+  findAndUpdate(documentStore.documentTree)
+}
+
 const handleNodeAction = (action: string, node: TreeNode) => {
   if (action === 'rename') {
-    if(node.type==="document"){
-      Message.info(`重命名文档: ${node.title}`)
-    }else{
-      Message.info(`重命名文件夹: ${node.title}`)
-    }
-    
+    editingNode.value = { id: node.id, type: node.type }
+    renameTitle.value = node.title
+    nextTick(() => {
+      renameInputRef.value?.focus()
+    })
   } else if (action === 'delete') {
-    if(node.type==="document"){
-    deleteDocument(node.id)
-    Message.warning(`删除文件: ${node.title}`)
+    if (node.type === "document") {
+      deleteDocument(node.id)
+      Message.warning(`删除文件: ${node.title}`)
 
-    }else{
+    } else {
       deleteFolder(node.id)
       Message.warning(`删除文件夹: ${node.title}`)
 
@@ -745,50 +801,61 @@ const handleNodeAction = (action: string, node: TreeNode) => {
 
 const handleDocAction = (action: string, doc: Pick<Document, 'id' | 'title'>) => {
   if (action === 'rename') {
-    Message.info(`重命名: ${doc.title}`)
+    editingNode.value = { id: doc.id, type: 'document' }
+    renameTitle.value = doc.title
+    nextTick(() => {
+      renameInputRef.value?.focus()
+    })
   } else if (action === 'duplicate') {
     Message.info(`复制: ${doc.title}`)
   } else if (action === 'delete') {
     deleteDocument(doc.id)
   }
 }
-
 const handleSearch = () => {
   // 搜索逻辑已在计算属性中实现
-}
+};
 
 interface UploadOption {
-  onProgress: (percent: number) => void
-  onSuccess: (response: boolean) => void
-  onError: (error: Error) => void
-  file: { name: string }
+  onProgress: (percent: number) => void;
+  onSuccess: (response: boolean) => void;
+  onError: (error: Error) => void;
+  file: { name: string };
 }
 
 const customUpload = (option: UploadOption) => {
-  const { onProgress, onSuccess, file } = option
+  const { onProgress, onSuccess, file } = option;
   // 模拟上传
-  onProgress(50)
+  onProgress(50);
   setTimeout(() => {
-    onSuccess(true)
-    Message.success(`${file.name} 上传成功`)
-  }, 1000)
-}
+    onSuccess(true);
+    Message.success(`${file.name} 上传成功`);
+  }, 1000);
+};
 
 const handleImport = () => {
-  showImportModal.value = false
-  Message.success('文档导入成功')
-}
+  showImportModal.value = false;
+  Message.success("文档导入成功");
+};
 
 const createFromTemplate = (template: Template) => {
-  showTemplateModal.value = false
-  Message.success(`正在使用"${template.name}"模板创建文档...`)
+  showTemplateModal.value = false;
+  Message.success(`正在使用"${template.name}"模板创建文档...`);
   setTimeout(() => {
-    navigateTo('/document/new?template=' + template.id)
-  }, 500)
-}
+    navigateTo("/document/new?template=" + template.id);
+  }, 500);
+};
 </script>
 
 <style scoped>
+.rename-input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 14px;
+  width: 160px;
+  outline: none;
+}
 .root-drop-zone {
   padding: 8px;
   margin-bottom: 10px;
@@ -800,6 +867,7 @@ const createFromTemplate = (template: Template) => {
   cursor: pointer;
   font-size: 13px;
 }
+
 .temp-folder-input {
   height: 32px;
   padding: 4px 8px;
@@ -1069,9 +1137,11 @@ const createFromTemplate = (template: Template) => {
     font-size: 24px;
   }
 
+
   .stat-cards {
     grid-template-columns: 1fr;
   }
+
 
   .document-grid {
     grid-template-columns: 1fr;

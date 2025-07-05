@@ -41,8 +41,7 @@ export default defineEventHandler(async (event) => {
       message: '文件夹已删除',
       data: result.rows[0]
     }
-  } catch (err) {
-    console.error('删除文件夹失败:', err)
+  } catch {
     return {
       status: 500,
       message: '服务器错误'

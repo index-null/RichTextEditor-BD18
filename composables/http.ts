@@ -1,7 +1,7 @@
 // axios基础的封装
 import axios from 'axios'
 import { Message } from '@arco-design/web-vue'
-// import { useUserStore } from '@/stores/userStore'
+import { useAuthStore } from '@/stores/auth'
 const httpInstance = axios.create({
   baseURL: 'http://localhost:4120/api',
   timeout: 5000
@@ -10,10 +10,9 @@ const httpInstance = axios.create({
 // axios请求拦截器
 httpInstance.interceptors.request.use(config => {
   // 1. 从pinia获取token数据
-//   const userStore = useUserStore()
+  const userStore = useAuthStore()
   // 2. 按照后端的要求拼接token数据
-//   const token = userStore.userInfo.token
-const token=""
+  const token = userStore.token
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }

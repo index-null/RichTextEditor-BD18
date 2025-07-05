@@ -1,12 +1,12 @@
 import { useDocumentStore } from './document'
-import { moveFolderAPI,createFolderAPI,deleteFolderAPI,renameFolderAPI } from '~/apis/folder'
-
+import { useAuthStore } from './auth'
+import { moveFolderAPI,createFolderAPI,deleteFolderAPI,renameFolderAPI } from '~/api/folder'
 import { Message } from '@arco-design/web-vue'
-
 
 export const useFolderStore = defineStore('folder', () => {
     const documentStore = useDocumentStore()
-    const userId=1 //TODO
+    const userStore=useAuthStore()
+    const userId= Number(userStore.user?.id)
     const createFolder=async(title:string,parentFolderId:number|null)=>{
         const result = await createFolderAPI({
             name: title,
@@ -16,7 +16,7 @@ export const useFolderStore = defineStore('folder', () => {
         console.log(result)
         if (result.status === 200) {
             await documentStore.loadDocumentTree()
-            Message.success("文件夹创建成功")
+            // Message.success("文件夹创建成功")
         }
     }
     const deleteFolder=async(folderId:number)=>{
