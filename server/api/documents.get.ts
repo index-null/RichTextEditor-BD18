@@ -1,31 +1,62 @@
-// 获取文档列表API
-export default defineEventHandler(async (_event) => {
-  // 模拟文档数据
-  const mockDocuments = [
-    {
-      id: '1',
-      title: '项目技术方案',
-      content: '# 技术方案\n这是项目技术方案的内容...',
-      author: '张三',
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date('2024-01-15'),
-      size: '2.3KB',
-      type: 'document'
-    },
-    {
-      id: '2',
-      title: '产品需求文档',
-      content: '# 产品需求\n这是产品需求文档的内容...',
-      author: '李四',
-      createdAt: new Date('2024-01-12'),
-      updatedAt: new Date('2024-01-14'),
-      size: '1.8KB',
-      type: 'document'
-    }
-  ]
+import pool from '../utils/db'
 
-  return {
-    success: true,
-    data: mockDocuments
+export default defineEventHandler(async (event) => {
+  // 只处理 GET 请求
+  if (event.req.method !== 'GET') {
+    throw createError({
+      statusCode: 405,
+      statusMessage: 'Method Not Allowed'
+    });
   }
-}) 
+
+  // 权限认证
+  await requireAuth(event);
+  const user = event.context.user;
+
+  if (!user || !user.user_group) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing user group'
+    });
+  }
+
+  if (!['user', 'test'].includes(user.user_group)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid user group'
+    });
+  }
+
+  try {
+    // 获取该用户组下的文件夹
+    const folderRes = await pool.query(
+      'SELECT * FROM folders WHERE user_group = $1 ORDER BY created_at DESC',
+      [user.user_group]
+    );
+
+    // 获取该用户组下的文档
+    const docRes = await pool.query(
+      'SELECT * FROM documents WHERE user_group = $1 ORDER BY created_at DESC',
+      [user.user_group]
+    );
+
+    return {
+      message: '获取成功',
+      user_group: user.user_group,
+      folders: folderRes.rows,
+      documents: docRes.rows
+    };
+  } catch (error: any) {
+    console.error('获取数据失败:', error);
+
+    if (isError(error)) {
+      throw error;
+    }
+
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Internal Server Error',
+      data: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
