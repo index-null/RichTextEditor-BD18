@@ -12,50 +12,46 @@
         <!-- 快速操作 -->
         <div class="quick-actions">
           <AButton type="primary" size="large" @click="createNewDocument">
-            <template #icon><Icon name="ri:add-line" /></template>
+            <template #icon>
+              <Icon name="ri:add-line" />
+            </template>
             新建文档
           </AButton>
           <AButton size="large" @click="showImportModal = true">
-            <template #icon><Icon name="ri:upload-2-line" /></template>
+            <template #icon>
+              <Icon name="ri:upload-2-line" />
+            </template>
             导入文档
           </AButton>
           <AButton size="large" @click="showTemplateModal = true">
-            <template #icon><Icon name="ri:file-copy-line" /></template>
+            <template #icon>
+              <Icon name="ri:file-copy-line" />
+            </template>
             从模板创建
           </AButton>
         </div>
       </div>
 
+
       <!-- 统计卡片 -->
       <div class="stat-cards">
         <ACard class="stat-card" :bordered="false">
-          <AStatistic
-            title="文档总数"
-            :value="totalDocuments"
-            :value-style="{ color: 'rgb(var(--primary-6))' }"
-          >
+          <AStatistic title="文档总数" :value="documentStore.allDocuments.length"
+            :value-style="{ color: 'rgb(var(--primary-6))' }">
             <template #prefix>
               <Icon name="ri:file-text-line" />
             </template>
           </AStatistic>
         </ACard>
         <ACard class="stat-card" :bordered="false">
-          <AStatistic
-            title="今日编辑"
-            :value="todayEdited"
-            :value-style="{ color: 'rgb(var(--success-6))' }"
-          >
+          <AStatistic title="今日编辑" :value="todayEdited" :value-style="{ color: 'rgb(var(--success-6))' }">
             <template #prefix>
               <Icon name="ri:edit-line" />
             </template>
           </AStatistic>
         </ACard>
         <ACard class="stat-card" :bordered="false">
-          <AStatistic
-            title="协作人数"
-            :value="collaborators"
-            :value-style="{ color: 'rgb(var(--warning-6))' }"
-          >
+          <AStatistic title="协作人数" :value="collaborators" :value-style="{ color: 'rgb(var(--warning-6))' }">
             <template #prefix>
               <Icon name="ri:team-line" />
             </template>
@@ -70,36 +66,50 @@
         <!-- 左侧文档树 -->
         <ACol :xs="24" :sm="24" :md="8" :lg="6">
           <ACard title="文档目录" :bordered="false" class="folder-card">
+            <!-- 根目录拖动区域 -->
+            <div class="root-drop-zone" @dragover.prevent @drop="handleDropToRoot">
+              <Icon name="ri:upload-cloud-line" style="margin-right: 6px;" />
+              拖拽到这里可移动到根目录
+            </div>
+
             <template #extra>
               <AButton type="text" size="small" @click="createNewFolder">
-                <template #icon><Icon name="ri:add-line" /></template>
+                <template #icon>
+                  <Icon name="ri:add-line" />
+                </template>
               </AButton>
             </template>
 
+
             <ASpin :loading="loading" tip="加载中...">
-              <ATree
-                v-if="documentTree.length > 0"
-                :data="documentTree"
-                :default-expand-all="true"
-                :draggable="true"
-                @select="handleTreeSelect"
-                @drop="handleTreeDrop"
-              >
+              <ATree v-if="documentStore.documentTree.length > 0" :data="documentStore.documentTree" :draggable="true"
+                :expanded-keys="expandedKeys" @update:expanded-keys="(keys) => expandedKeys = keys"
+                @select="handleTreeSelect" @expand="handleTreeExpand" @drop="handleTreeDrop"
+                @drag-start="handleDragStart">
                 <template #title="nodeData">
                   <div class="tree-node">
-                    <Icon
-                      :name="
-                        nodeData.type === 'folder'
-                          ? 'ri:folder-3-line'
-                          : 'ri:file-text-line'
-                      "
-                    />
-                    <span class="node-title">{{ nodeData.title }}</span>
-                    <div class="node-actions">
-                      <ADropdown
-                        trigger="click"
-                        @select="(value) => handleNodeAction(value, nodeData)"
-                      >
+                    <Icon :name="nodeData.type === 'folder' ? 'ri:folder-3-line' : 'ri:file-text-line'" />
+
+                    <!-- ✅ 新建文件夹输入框 -->
+                    <template v-if="nodeData.key === 'temp_folder'">
+                      <input ref="folderInputRef" class="temp-folder-input" v-model="newFolderTitle"
+                        @blur="handleCreateConfirm" @keyup.enter="handleCreateConfirm" @keyup.esc="cancelNewFolder"
+                        placeholder="请输入文件夹名称" />
+                    </template>
+
+                    <!-- ✅ 正在重命名的输入框 -->
+                    <template v-else-if="editingNode?.id === nodeData.id && editingNode?.type === nodeData.type">
+                      <input ref="renameInputRef" class="rename-input" v-model="renameTitle" @blur="confirmRename"
+                        @keyup.enter="confirmRename" @keyup.esc="cancelRename" placeholder="请输入新名称" />
+                    </template>
+
+                    <!-- ✅ 默认展示 -->
+                    <template v-else>
+                      <span class="node-title">{{ nodeData.title }}</span>
+                    </template>
+
+                    <div class="node-actions" v-if="nodeData.key !== 'temp_folder'">
+                      <ADropdown trigger="click" @select="(value) => handleNodeAction(value, nodeData)">
                         <Icon name="ri:more-line" class="action-icon" />
                         <template #content>
                           <ADoption value="rename">重命名</ADoption>
@@ -109,6 +119,7 @@
                     </div>
                   </div>
                 </template>
+
               </ATree>
               <AEmpty v-else description="暂无文档" />
             </ASpin>
@@ -124,19 +135,15 @@
               <ALink @click="navigateTo('/documents')">查看全部</ALink>
             </div>
 
-            <div v-if="recentDocuments.length > 0" class="document-grid">
-              <ACard
-                v-for="doc in recentDocuments"
-                :key="doc.id"
-                class="document-card"
-                hoverable
-                @click="openDocument(doc.id)"
-              >
+            <div v-if="documentStore.recentDocuments.length > 0" class="document-grid">
+              <ACard v-for="doc in documentStore.recentDocuments" :key="doc.id" class="document-card" hoverable
+                @click="openDocument(doc.id)">
                 <template #cover>
                   <div class="document-preview">
                     <Icon name="ri:file-text-line" :size="48" />
                   </div>
                 </template>
+
 
                 <ACardMeta>
                   <template #title>
@@ -144,20 +151,28 @@
                   </template>
                   <template #description>
                     <div class="document-meta">
-                      <span
-                        ><Icon name="ri:time-line" />
-                        {{ formatDate(doc.updatedAt) }}</span
-                      >
-                      <span><Icon name="ri:user-line" /> {{ doc.author }}</span>
+                      <span>
+                        <Icon name="ri:time-line" /> {{ formatDate(doc.updatedAt) }}
+                      </span>
+                      <span>
+                        <Icon name="ri:user-line" /> {{ doc.author }}
+                      </span>
                     </div>
                   </template>
                 </ACardMeta>
 
+
                 <template #actions>
-                  <span><Icon name="ri:star-line" /></span>
-                  <span><Icon name="ri:share-line" /></span>
+                  <span>
+                    <Icon name="ri:star-line" />
+                  </span>
+                  <span>
+                    <Icon name="ri:share-line" />
+                  </span>
                   <ADropdown @select="(value) => handleDocAction(value, doc)">
-                    <span><Icon name="ri:more-line" /></span>
+                    <span>
+                      <Icon name="ri:more-line" />
+                    </span>
                     <template #content>
                       <ADoption value="rename">重命名</ADoption>
                       <ADoption value="duplicate">复制</ADoption>
@@ -175,21 +190,12 @@
             <div class="section-header">
               <h2 class="section-title">所有文档</h2>
               <ASpace>
-                <AInput
-                  v-model="searchKeyword"
-                  placeholder="搜索文档"
-                  allow-clear
-                  @input="handleSearch"
-                >
+                <AInput v-model="searchKeyword" placeholder="搜索文档" allow-clear @input="handleSearch">
                   <template #prefix>
                     <Icon name="ri:search-line" />
                   </template>
                 </AInput>
-                <ASelect
-                  v-model="sortBy"
-                  placeholder="排序方式"
-                  style="width: 120px"
-                >
+                <ASelect v-model="sortBy" placeholder="排序方式" style="width: 120px">
                   <AOption value="updatedAt">最近修改</AOption>
                   <AOption value="createdAt">创建时间</AOption>
                   <AOption value="title">名称</AOption>
@@ -197,26 +203,20 @@
               </ASpace>
             </div>
 
-            <ATable
-              :data="filteredDocuments"
-              :columns="documentColumns"
-              :pagination="{
-                pageSize: 10,
-                showTotal: true,
-                showJumper: true,
-                showPageSize: true,
-              }"
-              :loading="loading"
-            >
+            <ATable :data="filteredDocuments" :columns="documentColumns" :pagination="{
+              pageSize: 10,
+              showTotal: true,
+              showJumper: true,
+              showPageSize: true
+            }" :loading="loading">
               <template #name="{ record }">
-                <div
-                  class="table-document-name"
-                  @click="openDocument(record.id)"
-                >
+                <div class="table-document-name" @click="openDocument(record.id)">
                   <Icon name="ri:file-text-line" />
                   <span>{{ record.title }}</span>
                   <ABadge v-if="record.isNew" text="New" :offset="[10, 0]" />
                 </div>
+
+
               </template>
               <template #updatedAt="{ record }">
                 <ATooltip :content="formatFullDate(record.updatedAt)">
@@ -225,28 +225,24 @@
               </template>
               <template #actions="{ record }">
                 <ASpace>
-                  <AButton
-                    type="text"
-                    size="mini"
-                    @click="openDocument(record.id)"
-                  >
-                    <template #icon><Icon name="ri:edit-line" /></template>
+
+                  <AButton type="text" size="mini" @click="openDocument(record.id)">
+                    <template #icon>
+                      <Icon name="ri:edit-line" />
+                    </template>
                   </AButton>
-                  <AButton
-                    type="text"
-                    size="mini"
-                    @click="shareDocument(record)"
-                  >
-                    <template #icon><Icon name="ri:share-line" /></template>
+
+
+                  <AButton type="text" size="mini" @click="shareDocument(record)">
+                    <template #icon>
+                      <Icon name="ri:share-line" />
+                    </template>
                   </AButton>
-                  <APopconfirm
-                    content="确定要删除这个文档吗？"
-                    @ok="deleteDocument(record.id)"
-                  >
+                  <APopconfirm content="确定要删除这个文档吗？" @ok="deleteDocument(record.id)">
                     <AButton type="text" size="mini" status="danger">
-                      <template #icon
-                        ><Icon name="ri:delete-bin-line"
-                      /></template>
+                      <template #icon>
+                        <Icon name="ri:delete-bin-line" />
+                      </template>
                     </AButton>
                   </APopconfirm>
                 </ASpace>
@@ -258,12 +254,7 @@
     </div>
 
     <!-- 导入文档模态框 -->
-    <AModal
-      v-model:visible="showImportModal"
-      title="导入文档"
-      :width="480"
-      @ok="handleImport"
-    >
+    <AModal v-model:visible="showImportModal" title="导入文档" :width="480" @ok="handleImport">
       <AUpload draggable accept=".md,.txt,.docx" :custom-request="customUpload">
         <template #upload-button>
           <div class="upload-demo-draggable">
@@ -276,20 +267,10 @@
     </AModal>
 
     <!-- 模板选择模态框 -->
-    <AModal
-      v-model:visible="showTemplateModal"
-      title="选择模板"
-      :width="720"
-      :footer="false"
-    >
+    <AModal v-model:visible="showTemplateModal" title="选择模板" :width="720" :footer="false">
       <div class="template-grid">
-        <ACard
-          v-for="template in templates"
-          :key="template.id"
-          class="template-card"
-          hoverable
-          @click="createFromTemplate(template)"
-        >
+        <ACard v-for="template in templates" :key="template.id" class="template-card" hoverable
+          @click="createFromTemplate(template)">
           <div class="template-icon">
             <Icon :name="template.icon" :size="48" />
           </div>
@@ -302,435 +283,96 @@
 </template>
 
 <script setup lang="ts">
-import { Message } from "@arco-design/web-vue";
-
+import { Message } from '@arco-design/web-vue'
+import { useDocumentStore, type Folder ,type DocumentTree} from '~/stores/document'
+import { useFolderStore } from '~/stores/folder'
 // 类型定义
 interface Document {
-  id: string;
-  title: string;
-  updatedAt: Date;
-  createdAt: Date;
-  author: string;
-  size: string;
-  isNew?: boolean;
+  id: number
+  title: string
+  updatedAt: Date
+  createdAt: Date
+  author: string
+  size: string
+  isNew?: boolean
+  type: "document"
+  folder_id: number | null
 }
 
 interface TreeNode {
-  key: string;
-  title: string;
-  type: "folder" | "document";
-  children?: TreeNode[];
+  id: number
+  key: string
+  title: string
+  type: 'folder' | 'document'
+  children?: TreeNode[]
 }
 
 interface Template {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
+  id: string
+  name: string
+  description: string
+  icon: string
 }
-
-//获得当前用户组的所有文档
-const getDoc = (token_Input) =>{
-
-const token = token_Input
-fetch('/api/documents', {
-  method: 'GET',
-  headers: {
-    'Authorization': `Bearer ${token}`
-  }
- 
-
-}).then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-})
-.then(data => {
- 
-console.log(data.message, data.user);
-console.log(data);
-
-})
-.catch(error => {
-  console.error('Error during registration:', error);
-  // 处理错误
-});
-  
-
-}
-
-// 删除文档后端API
-const deleteDoc = (token_Input, docId_Input) =>{
-
-const token = token_Input
-const docId = docId_Input
-fetch(`/api/documents/${docId}`, {
-  method: 'DELETE',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-  },
- 
-}).then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-})
-.then(data => {
-console.log(data.message, data.user);
-console.log(data);
-})
-.catch(error => {
-  console.error('Error during registration:', error);
-  // 处理错误
-});
-  
-}
-
-
-//举例说明更新文档内容输入,可删除
-
-const Update_Doc_Input = {
-  new_content: null,
-}
-const docId_Input = null; // 要修改内容的文档id
-
-
-// 更新文档后端API
-const updateDoc = (token_Input, Update_Doc_Input, docId_Input) =>{
-
-const token = token_Input
-const docId = docId_Input
-fetch(`/api/documents/${docId}`, {
-  method: 'PUT',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-     'Content-Type': 'application/json', // ✅ 告诉服务器这是 JSON 格式
-  },
-  body: JSON.stringify(Update_Doc_Input),
- 
-}).then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-})
-.then(data => {
-console.log(data.message, data.user);
-console.log(data);
-})
-.catch(error => {
-  console.error('Error during registration:', error);
-  // 处理错误
-});
-  
-}
-
-
-
-//举例说明创建文档,可删除
-//  const loginData_Input = {};
-const Doc_Data_Input = {
-  title: null ,
-  content: null,
-  folder_id : null
-}
-
-// 创建文档后端API
-const createDoc = (token_Input, Doc_Data_Input) =>{
-
-const token = token_Input
-fetch('/api/documents', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-     'Content-Type': 'application/json', // ✅ 告诉服务器这是 JSON 格式
-  },
-  body: JSON.stringify(Doc_Data_Input),
- 
-}).then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-})
-.then(data => {
-console.log(data.message, data.user);
-console.log(data);
-})
-.catch(error => {
-  console.error('Error during registration:', error);
-  // 处理错误
-});
-  
-}
-
-//举例说明删除数据输入,可删除
-// const folderId_Input = null; // 要重命名的文件夹ID使用的文件夹ID一样
-
-// 删除文件夹后端API
-const deleteFolder = (token_Input, folderId_Input) =>{
-const token = token_Input
-const folderId = folderId_Input
-fetch(`/api/folders/${folderId}`, {
-  method: 'DELETE',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-  },
- 
-}).then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-})
-.then(data => {
-console.log(data.message, data.user);
-console.log(data);
-})
-.catch(error => {
-  console.error('Error during registration:', error);
-  // 处理错误
-});
-  
-}
-
-//举例说明重命名数据输入,可删除
-const reName_Data_Input = null
-const folderId_Input = null; // 要重命名的文件夹ID
-
-// 重命名文件夹后端API
-const reNameFolder = (token_Input, reName_Data_Input, folderId_Input) =>{
-
-const token = token_Input
-const folderId = folderId_Input
-fetch(`/api/folders/${folderId}`, {
-  method: 'PUT',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-     'Content-Type': 'application/json', // ✅ 告诉服务器这是 JSON 格式
-  },
-  body: JSON.stringify(reName_Data_Input),
- 
-}).then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-})
-.then(data => {
-console.log(data.message, data.user);
-console.log(data);
-})
-.catch(error => {
-  console.error('Error during registration:', error);
-  // 处理错误
-});
-  
-}
-
-
-//举例说明创建文件夹数据输入,可删除
-const folder_Data_Input = null
-
-// 创建文件夹后端API
-const createFolder = (token_Input, folder_Data_Input) =>{
-
-const token = token_Input
-fetch('/api/folders', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-     'Content-Type': 'application/json', // ✅ 告诉服务器这是 JSON 格式
-  },
-  body: JSON.stringify(folder_Data_Input),
- 
-}).then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-})
-.then(data => {
-console.log(data.message, data.user);
-console.log(data);
-})
-.catch(error => {
-  console.error('Error during registration:', error);
-  // 处理错误
-});
-  
-}
-
-//测试token，需要更改为每次登陆时临时生成的Token。在Login_API函数中用data.body.token获得登录的Token，然后保存下来。
-const token_Input = null
-// 后端API
-const profile = (token_Input) => {
-  const token = token_Input;
-  fetch("/api/auth/profile", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log(data.message, data.user);
-      console.log(data);
-    })
-    .catch((error) => {
-      console.error("Error during registration:", error);
-      // 处理错误
-    });
-};
-
-//举例说明登录数据输入,可删除
-const loginData_Input = {};
-
-const login_API = (loginData_Input) => {
-  const loginData = loginData_Input;
-
-  fetch("/api/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(loginData),
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log(data.statusCode, data.body);
-      // 这里可以用data.body.token获得登录的Token
-    })
-    .catch((error) => {
-      console.error("Error during registration:", error);
-      // 处理错误
-    });
-};
-
-// 举例registerData_Input的输入形式,可删除
-const registerData_Input = {};
-
-const register_API = (registerData_Input) => {
-  const registerData = registerData_Input;
-
-  fetch("/api/auth/register", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(registerData),
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log("Registration successful:", data);
-      // 处理注册成功后的逻辑
-    })
-    .catch((error) => {
-      console.error("Error during registration:", error);
-      // 处理错误
-    });
-};
 
 // 响应式数据
-const userName = ref("用户");
-const loading = ref(false);
-const searchKeyword = ref("");
-const sortBy = ref("updatedAt");
-const showImportModal = ref(false);
-const showTemplateModal = ref(false);
+const userStore = useAuthStore()
+const userName = userStore.user?.nickname || "用户"
+const loading = ref(false)
+const searchKeyword = ref('')
+const sortBy = ref('updatedAt')
+const showImportModal = ref(false)
+const showTemplateModal = ref(false)
 
+//选择的文件夹
+const selectFolderId = ref<number | null>(null)
+// 新建文件夹
+const newFolderNode = ref<{ parentId: number | null } | null>(null)
+const newFolderTitle = ref('')
+const folderInputRef = ref<HTMLInputElement | null>(null)
+
+const documentStore = useDocumentStore()
+onMounted(async () => {
+  await documentStore.loadDocumentTree()
+  await documentStore.loadRecentDocuments()
+  const allFolderKeys = getAllFolderIds(documentStore.documentTree)
+  expandedKeys.value = allFolderKeys
+
+})
+const getAllFolderIds = (nodes: DocumentTree[]): string[] => {
+  const result: string[] = []
+
+  const dfs = (nodeList: DocumentTree[]) => {
+    for (const node of nodeList) {
+      if (node.type === 'folder') {
+        result.push(String(node.id))
+        if (node.children?.length) {
+          dfs(node.children)
+        }
+      }
+    }
+  }
+
+  dfs(nodes)
+  return result
+}
+
+const allDocuments = computed(() => {
+  return documentStore.allDocuments
+})
+const folderStore = useFolderStore()
 // 统计数据
-const totalDocuments = ref(23);
-const todayEdited = ref(5);
-const collaborators = ref(8);
+// const totalDocuments = ref(0)
+const todayEdited = computed(() => {
+  const today = new Date()
+  const todayDate = today.toISOString().split('T')[0] // yyyy-mm-dd
 
-// 文档数据
-const documentTree = ref<TreeNode[]>([
-  {
-    key: "1",
-    title: "工作文档",
-    type: "folder",
-    children: [
-      { key: "1-1", title: "项目计划.md", type: "document" },
-      { key: "1-2", title: "需求文档.md", type: "document" },
-    ],
-  },
-  {
-    key: "2",
-    title: "个人笔记",
-    type: "folder",
-    children: [{ key: "2-1", title: "学习笔记.md", type: "document" }],
-  },
-]);
+  return documentStore.allDocuments.filter(doc => {
+    const updatedAt = new Date(doc.updatedAt).toISOString().split('T')[0]
+    return updatedAt === todayDate
+  }).length
+})
 
-const recentDocuments = ref<
-  Pick<Document, "id" | "title" | "updatedAt" | "author" | "isNew">[]
->([
-  {
-    id: "1",
-    title: "项目技术方案",
-    updatedAt: new Date("2024-01-15"),
-    author: "张三",
-    isNew: true,
-  },
-  {
-    id: "2",
-    title: "产品需求文档",
-    updatedAt: new Date("2024-01-14"),
-    author: "李四",
-  },
-  {
-    id: "3",
-    title: "会议纪要",
-    updatedAt: new Date("2024-01-13"),
-    author: "王五",
-  },
-]);
-
-const myDocuments = ref<Document[]>([
-  {
-    id: "1",
-    title: "项目技术方案",
-    updatedAt: new Date("2024-01-15"),
-    createdAt: new Date("2024-01-10"),
-    author: "张三",
-    size: "2.3KB",
-    isNew: true,
-  },
-  {
-    id: "2",
-    title: "产品需求文档",
-    updatedAt: new Date("2024-01-14"),
-    createdAt: new Date("2024-01-09"),
-    author: "李四",
-    size: "1.8KB",
-  },
-  {
-    id: "3",
-    title: "会议纪要",
-    updatedAt: new Date("2024-01-13"),
-    createdAt: new Date("2024-01-08"),
-    author: "王五",
-    size: "0.9KB",
-  },
-]);
+const collaborators = ref(8)
 
 // 模板数据
 const templates: Template[] = [
@@ -762,34 +404,39 @@ const templates: Template[] = [
 
 // 表格列配置
 const documentColumns = [
+
   {
-    title: "文档名称",
-    dataIndex: "title",
-    slotName: "name",
+    title: '文档名称',
+    dataIndex: 'title',
+    slotName: 'name',
     ellipsis: true,
     tooltip: true,
     width: 300,
   },
   {
-    title: "最后修改",
-    dataIndex: "updatedAt",
-    slotName: "updatedAt",
-    width: 150,
+
+    title: '最后修改',
+    dataIndex: 'updatedAt',
+    slotName: 'updatedAt',
+    width: 150
   },
   {
-    title: "作者",
-    dataIndex: "author",
+
+    title: '作者',
+    dataIndex: 'author',
     ellipsis: true,
     width: 100,
   },
   {
-    title: "大小",
-    dataIndex: "size",
-    width: 80,
+
+    title: '大小',
+    dataIndex: 'size',
+    width: 80
   },
   {
-    title: "操作",
-    slotName: "actions",
+
+    title: '操作',
+    slotName: 'actions',
     width: 120,
     align: "center",
   },
@@ -797,16 +444,16 @@ const documentColumns = [
 
 // 计算属性
 const filteredDocuments = computed(() => {
-  let docs = [...myDocuments.value];
+  let docs = [...allDocuments.value]
 
   // 搜索过滤
   if (searchKeyword.value) {
-    docs = docs.filter(
-      (doc) =>
-        doc.title.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
-        doc.author.toLowerCase().includes(searchKeyword.value.toLowerCase())
-    );
+    docs = docs.filter(doc =>
+      doc.title.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
+      (doc.author && doc.author.toLowerCase().includes(searchKeyword.value.toLowerCase()))
+    )
   }
+
 
   // 排序
   docs.sort((a, b) => {
@@ -817,108 +464,363 @@ const filteredDocuments = computed(() => {
       const aValue = sortBy.value === "updatedAt" ? a.updatedAt : a.createdAt;
       const bValue = sortBy.value === "updatedAt" ? b.updatedAt : b.createdAt;
       // 确保日期值存在且转换为时间戳
-      const aTime =
-        aValue instanceof Date ? aValue.getTime() : new Date(aValue).getTime();
-      const bTime =
-        bValue instanceof Date ? bValue.getTime() : new Date(bValue).getTime();
-      return bTime - aTime;
+      const aTime = aValue instanceof Date ? aValue.getTime() : aValue ? new Date(aValue).getTime() : 0
+      const bTime = bValue instanceof Date ? bValue.getTime() : bValue ? new Date(bValue).getTime() : 0
+      return bTime - aTime
     }
-  });
+  })
 
-  return docs;
-});
+  return docs
+})
 
 // 工具函数
-const formatDate = (date: Date) => {
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+const formatDate = (date: Date | string) => {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const now = new Date()
 
-  if (days === 0) {
-    return "今天";
-  } else if (days === 1) {
-    return "昨天";
-  } else if (days < 7) {
-    return `${days} 天前`;
+  const sameDay = d.getFullYear() === now.getFullYear()
+    && d.getMonth() === now.getMonth()
+    && d.getDate() === now.getDate()
+
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  const isYesterday = d.getFullYear() === yesterday.getFullYear()
+    && d.getMonth() === yesterday.getMonth()
+    && d.getDate() === yesterday.getDate()
+
+  if (sameDay) {
+    return "今天"
+  } else if (isYesterday) {
+    return "昨天"
   } else {
-    return new Intl.DateTimeFormat("zh-CN", {
-      month: "2-digit",
-      day: "2-digit",
-    }).format(date);
+    const diff = now.getTime() - d.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    if (days < 7) {
+      return `${days} 天前`
+    } else {
+      return new Intl.DateTimeFormat('zh-CN', {
+        month: '2-digit',
+        day: '2-digit'
+      }).format(d)
+    }
   }
-};
+}
 
-const formatFullDate = (date: Date) => {
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
+
+const formatFullDate = (date: Date | string) => {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(d)
+}
 
 // 事件处理
-const createNewDocument = () => {
-  navigateTo("/document/new");
-};
-
+const createNewDocument = async () => {
+  // 创建新文档
+  const data = await documentStore.createDocument("新建文档", selectFolderId.value)
+  navigateTo(`/document/${data.id}`)
+}
 const createNewFolder = () => {
-  Message.info("创建文件夹功能开发中...");
-};
+  const parentId = selectFolderId.value ?? null
+  newFolderNode.value = { parentId }
+console.log("创建新文件夹，父节点ID:", parentId)
+  // ✅ 第 1 步：展开父节点（确保更新）
+  const pidStr = "folder_" + parentId
+  if (parentId !== null && !expandedKeys.value.includes(pidStr)) {
+    expandedKeys.value = [...expandedKeys.value, pidStr] // 触发响应式
+  }
 
-const handleTreeSelect = (selectedKeys: string[]) => {
-  console.log("选中的节点:", selectedKeys);
-};
+  // ✅ 第 2 步：插入临时节点
+  if (parentId === null) {
+    documentStore.documentTree.unshift({
+      id: -1,
+      key: 'temp_folder',
+      title: '',
+      type: 'folder',
+      children: []
+    })
+  } else {
+    const parent = findNodeById(documentStore.documentTree, parentId)
+    if (parent) {
+      parent.children = parent.children || []
+      parent.children.unshift({
+        id: -1,
+        key: 'temp_folder',
+        title: '',
+        type: 'folder',
+        children: []
+      })
+    }
+  }
 
-const handleTreeDrop = (_params: {
-  dragNode: TreeNode;
-  dropNode: TreeNode;
-  dropPosition: number;
+  // ✅ 第 3 步：聚焦输入框
+  nextTick(() => {
+    folderInputRef.value?.focus()
+  })
+}
+
+
+const findNodeById = (nodes: DocumentTree[], id: number): DocumentTree | null => {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    if (node.children?.length) {
+      const result = findNodeById(node.children, id)
+      if (result) return result
+    }
+  }
+  return null
+}
+
+
+const cancelNewFolder = () => {
+  removeTempFolderNode()
+  newFolderNode.value = null
+  newFolderTitle.value = ''
+}
+const creating = ref(false)
+
+const handleCreateConfirm = async () => {
+  if (creating.value) return
+  creating.value = true
+
+  const title = newFolderTitle.value.trim()
+  const parentId = newFolderNode.value?.parentId ?? null
+  removeTempFolderNode()
+  newFolderNode.value = null
+  newFolderTitle.value = ''
+
+  if (!title) {
+    creating.value = false
+    return
+  }
+
+  try {
+    await folderStore.createFolder(title, parentId)
+    await documentStore.loadDocumentTree()
+    Message.success('文件夹创建成功')
+  } catch (err) {
+    console.error(err)
+    Message.error('创建失败')
+  } finally {
+    creating.value = false
+  }
+}
+
+const removeTempFolderNode = () => {
+  const recursiveRemove = (nodes: DocumentTree[]) => {
+    return nodes.filter((node) => {
+      if (node.key === 'temp_folder') return false
+      if (node.children) node.children = recursiveRemove(node.children)
+      return true
+    })
+  }
+  documentStore.documentTree = recursiveRemove(documentStore.documentTree)
+}
+
+const handleTreeSelect = (_selectedKeys: string[], info: { selected: boolean; node: Document | Folder }) => {
+  const selectedNode = info.node
+  if (selectedNode?.type === 'folder') {
+    selectFolderId.value = selectedNode.id
+  }
+  console.log('选中的节点数据:', selectedNode)
+}
+// 文档树展开状态
+const expandedKeys = ref<string[]>([])
+const handleTreeExpand = (keys: string[]) => {
+  expandedKeys.value = keys
+}
+const handleTreeDrop = async ({
+  dragNode,
+  dropNode
+}: {
+  dragNode: Document | Folder
+  dropNode?: Document | Folder // 可能为空，表示拖到根
+  dropPosition?: number
+  dropToGap?: boolean
 }) => {
-  Message.success("文档已移动");
-};
+  console.log('拖动节点:', dragNode)
+  console.log('目标节点:', dropNode)
 
-const openDocument = (documentId: string) => {
-  navigateTo(`/document/${documentId}`);
-};
+  const oldKeys = [...expandedKeys.value]
+  console.log("oldkeys:", oldKeys)
+
+  // 判断是否拖到根目录
+  const dropToRoot = !dropNode || dropNode.type !== 'folder'
+  if (dragNode.type === 'document') {
+    const targetFolderId = dropToRoot ? null : dropNode.type === 'folder' ? dropNode.id : (dropNode as Document).folder_id
+
+    if (targetFolderId !== dragNode.folder_id) {
+      await documentStore.moveDocument(dragNode.id, targetFolderId)
+    } else {
+      return
+    }
+
+  } else if (dragNode.type === 'folder') {
+    // 校验不能拖到自己或其子文件夹
+    const isInvalidDrop =
+      (dropNode?.type === 'folder' && (dragNode.id === dropNode.id || dragNode.parent_folder_id === dropNode.id)) ||
+      (dropNode?.type === 'document' && (dragNode.id === dropNode.folder_id))
+
+    if (isInvalidDrop) {
+      return
+    }
+
+    const targetParentId =
+      dropToRoot
+        ? null
+        : dropNode.type === 'folder'
+          ? dropNode.id
+          : (dropNode as Document).folder_id
+
+    if (targetParentId !== dragNode.parent_folder_id) {
+      await folderStore.moveFolder(dragNode.id, targetParentId)
+    } else {
+      return
+
+    }
+  }
+
+  // 恢复展开状态
+  expandedKeys.value = oldKeys
+  console.log("拖动后", expandedKeys.value)
+}
+
+const handleDropToRoot = async (e: DragEvent) => {
+  const raw = e.dataTransfer?.getData('application/json')
+  if (!raw) return
+  const data = JSON.parse(raw) as Document | Folder
+
+  if (data.type === 'document') {
+    await documentStore.moveDocument(data.id, null)
+  } else if (data.type === 'folder') {
+    await folderStore.moveFolder(data.id, null)
+  }
+
+  // Message.success('已移动到根目录')
+}
+const handleDragStart = (e: DragEvent, node: TreeNode) => {
+  e.dataTransfer?.setData('application/json', JSON.stringify(node))
+}
+
+const openDocument = (documentId: number) => {
+  navigateTo(`/document/${documentId}`)
+}
 
 const shareDocument = (doc: Pick<Document, "id" | "title">) => {
   Message.info(`分享文档: ${doc.title}`);
 };
 
-const deleteDocument = (documentId: string) => {
-  loading.value = true;
-  setTimeout(() => {
-    loading.value = false;
-    Message.success("文档已删除");
-    myDocuments.value = myDocuments.value.filter(
-      (doc) => doc.id !== documentId
-    );
-  }, 1000);
-};
+const deleteDocument = (documentId: number) => {
+  loading.value = true
+  setTimeout(async () => {
+    loading.value = false
+    await documentStore.deleteDocument(documentId)
+  }, 1000)
+}
+const deleteFolder = (folderId: number) => {
+  loading.value = true
+  setTimeout(async () => {
+    loading.value = false
+    await folderStore.deleteFolder(folderId)
+  }, 1000)
+}
+// 重命名文档状态
+const renameTitle = ref('')
+const editingNode = ref<{ id: number; type: 'folder' | 'document' } | null>(null)
+const renameInputRef = ref<HTMLInputElement | null>(null)
+// 执行重命名
+const confirmRename = async () => {
+  const node = editingNode.value
+  if (!node || !renameTitle.value.trim()) return
+
+  const title = renameTitle.value.trim()
+  try {
+    let folderExists = false
+    let documentExists = false
+    if (node.type === 'folder') {
+      const result=await folderStore.renameFolder(node.id, title)
+      if(result&&result.status!=200){
+        folderExists = true
+      }
+    } else {
+      const result=await documentStore.updateDocument(node.id, {title:title})
+      if(result&&result.status!=200){
+        documentExists = true
+      }
+    }
+    if (folderExists || documentExists) {
+      return
+    }
+   
+    // await documentStore.loadDocumentTree()
+    updateNodeTitle(node.id, node.type, title)
+    await documentStore.loadRecentDocuments()
+  } catch (err) {
+    console.error(err)
+    Message.error('重命名失败')
+  } finally {
+    editingNode.value = null
+    renameTitle.value = ''
+  }
+}
+
+const cancelRename = () => {
+  editingNode.value = null
+  renameTitle.value = ''
+}
+const updateNodeTitle = (id: number, type: 'folder' | 'document', newTitle: string) => {
+  const findAndUpdate = (nodes: TreeNode[]) => {
+    for (const node of nodes) {
+      if (node.id === id && node.type === type) {
+        node.title = newTitle
+        return true
+      }
+      if (node.children) {
+        if (findAndUpdate(node.children)) return true
+      }
+    }
+    return false
+  }
+  findAndUpdate(documentStore.documentTree)
+}
 
 const handleNodeAction = (action: string, node: TreeNode) => {
-  if (action === "rename") {
-    Message.info(`重命名: ${node.title}`);
-  } else if (action === "delete") {
-    Message.warning(`删除: ${node.title}`);
-  }
-};
+  if (action === 'rename') {
+    editingNode.value = { id: node.id, type: node.type }
+    renameTitle.value = node.title
+    nextTick(() => {
+      renameInputRef.value?.focus()
+    })
+  } else if (action === 'delete') {
+    if (node.type === "document") {
+      deleteDocument(node.id)
+      Message.warning(`删除文件: ${node.title}`)
 
-const handleDocAction = (
-  action: string,
-  doc: Pick<Document, "id" | "title">
-) => {
-  if (action === "rename") {
-    Message.info(`重命名: ${doc.title}`);
-  } else if (action === "duplicate") {
-    Message.info(`复制: ${doc.title}`);
-  } else if (action === "delete") {
-    deleteDocument(doc.id);
-  }
-};
+    } else {
+      deleteFolder(node.id)
+      Message.warning(`删除文件夹: ${node.title}`)
 
+    }
+  }
+}
+
+const handleDocAction = (action: string, doc: Pick<Document, 'id' | 'title'>) => {
+  if (action === 'rename') {
+    editingNode.value = { id: doc.id, type: 'document' }
+    renameTitle.value = doc.title
+    nextTick(() => {
+      renameInputRef.value?.focus()
+    })
+  } else if (action === 'duplicate') {
+    Message.info(`复制: ${doc.title}`)
+  } else if (action === 'delete') {
+    deleteDocument(doc.id)
+  }
+}
 const handleSearch = () => {
   // 搜索逻辑已在计算属性中实现
 };
@@ -955,6 +857,48 @@ const createFromTemplate = (template: Template) => {
 </script>
 
 <style scoped>
+.rename-input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 14px;
+  width: 160px;
+  outline: none;
+}
+
+.root-drop-zone {
+  padding: 8px;
+  margin-bottom: 10px;
+  background-color: #f7f8fa;
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-2);
+  text-align: center;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.temp-folder-input {
+  height: 32px;
+  padding: 4px 8px;
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  width: 180px;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-left: 8px;
+}
+
+.temp-folder-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary-6-rgb), 0.2);
+}
+
+.root-drop-zone:hover {
+  background-color: #e8f4ff;
+}
+
 .home-page {
   padding: 24px;
   max-width: 1440px;
@@ -978,11 +922,7 @@ const createFromTemplate = (template: Template) => {
 }
 
 .gradient-text {
-  background: linear-gradient(
-    120deg,
-    rgb(var(--primary-6)) 0%,
-    rgb(var(--primary-5)) 100%
-  );
+  background: linear-gradient(120deg, rgb(var(--primary-6)) 0%, rgb(var(--primary-5)) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1207,9 +1147,11 @@ const createFromTemplate = (template: Template) => {
     font-size: 24px;
   }
 
+
   .stat-cards {
     grid-template-columns: 1fr;
   }
+
 
   .document-grid {
     grid-template-columns: 1fr;
