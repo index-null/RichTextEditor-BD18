@@ -3,6 +3,8 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import pool from '@/server/utils/db'
 
 export default defineEventHandler(async (event) => {
+  await requireAuth(event);
+  const user = event.context.user;
   const body = await readBody(event)
   const { folderId, targetParentId } = body
 
@@ -27,7 +29,7 @@ export default defineEventHandler(async (event) => {
     `
     const cycleCheckResult = await pool.query(checkCycleSQL, [targetId, folderId])
     if (cycleCheckResult.rowCount&&cycleCheckResult.rowCount > 0) {
-      throw createError({ status: 400, message: '不能将文件夹移动到其自身或子文件夹中' })
+      return{ status: 400, message: '不能将文件夹移动到其自身或子文件夹中' }
     }
   }
 
@@ -42,6 +44,6 @@ export default defineEventHandler(async (event) => {
       data: result.rows[0]
     }
   } catch (err) {
-    throw createError({ status: 500, message: '文件夹移动失败', data: (err as Error).message })
+    return{ status: 500, message: '文件夹移动失败', data: (err as Error).message }
   }
 })

@@ -7,6 +7,8 @@ const RenameSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  await requireAuth(event);
+  const user = event.context.user
   const id = Number(getRouterParam(event, 'id'))
   const body = await readBody(event)
   const parsed = RenameSchema.safeParse(body)
@@ -18,12 +20,34 @@ export default defineEventHandler(async (event) => {
       issues: parsed.error.issues
     }
   }
-  await requireAuth(event);
+
   const { name } = parsed.data
 
   try {
     const client = await pool.connect()
+    const folderRes = await pool.query(
+      'SELECT * FROM folders WHERE id = $1 AND author_id = $2',
+      [id, user.id]
+    );
+    if (folderRes.rows.length === 0) {
+      return {
+        status: 404,
+        message: '无权限修改'
+      };
+    }
 
+    // 检查新名字是否冲突
+    const nameCheck = await pool.query(
+      'SELECT id FROM folders WHERE name = $1 AND author_id = $2 AND id != $3',
+      [name, user.id, id]
+    );
+    if (nameCheck.rows.length > 0) {
+      return{
+        status: 409,
+        Message: 'Folder name already exists'
+      };
+    }
+    // 执行重命名操作
     const result = await client.query(
       `UPDATE folders SET name = $1 WHERE id = $2 RETURNING *`,
       [name, id]

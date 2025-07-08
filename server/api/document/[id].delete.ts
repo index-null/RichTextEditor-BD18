@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     if (docRes.rows.length === 0) {
       return{
         status: 404,
-        Message: '文档未找到或无权限访问'
+        message: '文档未找到或无权限访问'
       };
     }
 

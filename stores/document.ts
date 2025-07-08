@@ -184,10 +184,11 @@ export const useDocumentStore = defineStore('document', () => {
           ...updates,
           ...(updates.content ? { updatedAt: new Date() } : {})
         }
-        await updateDocumentAPI(
+        const result=await updateDocumentAPI(
           documentId,
           updatedData
         )
+        return result 
       
     } catch (error) {
       console.error('更新文档失败:', error)

@@ -739,11 +739,23 @@ const confirmRename = async () => {
 
   const title = renameTitle.value.trim()
   try {
+    let folderExists = false
+    let documentExists = false
     if (node.type === 'folder') {
-      await folderStore.renameFolder(node.id, title)
+      const result=await folderStore.renameFolder(node.id, title)
+      if(result&&result.status!=200){
+        folderExists = true
+      }
     } else {
-      await documentStore.updateDocument(node.id, { title: title })
+      const result=await documentStore.updateDocument(node.id, {title:title})
+      if(result&&result.status!=200){
+        documentExists = true
+      }
     }
+    if (folderExists || documentExists) {
+      return
+    }
+   
     // await documentStore.loadDocumentTree()
     updateNodeTitle(node.id, node.type, title)
     await documentStore.loadRecentDocuments()

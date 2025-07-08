@@ -23,8 +23,8 @@ export default defineEventHandler(async (event) => {
 
     if (folderRes.rows.length === 0) {
       return {
-        statusCode: 404,
-        statusMessage: '文件夹未找到或无权限访问'
+        status: 404,
+        message: '文件夹未找到或无权限访问'
       };
     }
 

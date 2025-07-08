@@ -30,10 +30,10 @@ export const useFolderStore = defineStore('folder', () => {
         const result = await renameFolderAPI(folderId,{
             name: title
         })
-        console.log(result)
         if (result.status === 200) {
             await documentStore.loadDocumentTree()
         }
+        return result
     }
     const moveFolder = async (folderId: number, targetParentId: number | null) => {
         const result = await moveFolderAPI(folderId, targetParentId)

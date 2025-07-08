@@ -3,6 +3,8 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import pool from '@/server/utils/db'
 
 export default defineEventHandler(async (event) => {
+  await requireAuth(event);
+  const user = event.context.user;
   const body = await readBody(event)
   const { documentId, targetFolderId } = body
 
@@ -14,6 +16,19 @@ export default defineEventHandler(async (event) => {
   const folderId = targetFolderId || null
 
   try {
+    // 检查是否是用户自己的文档
+    const docRes = await pool.query(
+      'SELECT * FROM documents WHERE id = $1 AND author_id = $2',
+      [documentId, user.id]
+    );
+
+    if (docRes.rows.length === 0) {
+      return{
+        status: 404,
+        message: '无权限移动'
+      };
+    }
+
     const result = await pool.query(
       `UPDATE documents SET folder_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
       [folderId, documentId]
